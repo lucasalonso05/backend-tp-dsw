@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/config';
 import logger from './config/logger';
+import lugarRouter from './routes/lugar.routes';
+
 
 const app: Application = express();
 
@@ -40,3 +42,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.listen(config.port, () => {
   logger.info(`Servidor corriendo en http://localhost:${config.port}`);
 });
+
+
+app.use('/lugares', lugarRouter);

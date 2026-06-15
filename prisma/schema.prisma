@@ -44,7 +44,7 @@ model evento {
   fecha_hora_inicio DateTime 
   fecha_hora_fin DateTime
   estado estado_evento @default(PENDIENTE)
-
+  stock Int
   entradas entrada[]
   asistencias asistencia[]
     
