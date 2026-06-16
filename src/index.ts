@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { config } from './config/config';
 import logger from './config/logger';
 import lugarRouter from './routes/lugar.routes';
+import organizadorRouter from './routes/organizador.routes'
 
 
 const app: Application = express();
@@ -45,3 +46,5 @@ app.listen(config.port, () => {
 
 
 app.use('/lugares', lugarRouter);
+
+app.use('organizadores', organizadorRouter);
