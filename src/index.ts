@@ -49,4 +49,4 @@ app.use('/lugares', lugarRouter);
 
 app.use('/organizadores', organizadorRouter);
 
-app.use('/asistente', asistenteRouter);
+app.use('/asistentes', asistenteRouter);
