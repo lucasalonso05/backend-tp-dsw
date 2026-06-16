@@ -6,6 +6,7 @@ import { config } from './config/config';
 import logger from './config/logger';
 import lugarRouter from './routes/lugar.routes';
 import organizadorRouter from './routes/organizador.routes'
+import asistenteRouter from './routes/asistente.routes'
 
 
 const app: Application = express();
@@ -48,3 +49,6 @@ app.listen(config.port, () => {
 app.use('/lugares', lugarRouter);
 
 app.use('/organizadores', organizadorRouter);
+
+app.use('/asistentes', asistenteRouter);
+
