@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum estado_evento {
+  PENDIENTE
+  CONFIRMADO
+  REALIZADO
+  CANCELADO
+}
+
+enum estado_ticket_digital {
+  NO_ESCANEADO
+  ESCANEADO
+}
+
+model asistencia {
+  id_asistente Int
+  id_evento    Int
+
+  fecha_hora_asistencia DateTime?
+
+  FK_asistente asistente @relation(fields: [id_asistente], references: [id])
+  FK_evento    evento    @relation(fields: [id_evento], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id_asistente, id_evento])
+  @@map("asistencias")
+}
+
+model evento {
+  id Int @id @default(autoincrement())
+
+  titulo            String
+  categoria         String
+  fecha_hora_inicio DateTime
+  fecha_hora_fin    DateTime
+  estado            estado_evento @default(PENDIENTE)
+  stock             Int
+  entradas          entrada[]
+  asistencias       asistencia[]
+
+  id_organizador         Int
+  id_lugar               Int
+  fecha_hora_creacion    DateTime  @default(now())
+  fecha_hora_cancelacion DateTime?
+
+  FK_lugar       lugar       @relation(fields: [id_lugar], references: [id])
+  FK_organizador organizador @relation(fields: [id_organizador], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("eventos")
+}
+
+model lugar {
+  id          Int     @id @default(autoincrement())
+  capacidad   Int
+  descripcion String?
+  ciudad      String
+  calle       String
+  altura      String
+  cp          Int
+  provincia   String
+
+  eventos evento[]
+
+  @@map("lugares")
+}
+
+model entrada {
+  id_evento       Int
+  cod             Int      @default(autoincrement())
+  tipo_entrada    String
+  precio_unitario Decimal  @db.Decimal(10, 2)
+  horario_inicio  DateTime
+  horario_fin     DateTime
+  FK_evento       evento   @relation(fields: [id_evento], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id_evento, cod])
+  @@map("entradas")
+}
+
+model orden {
+  id_comprador Int
+  cod          Int @default(autoincrement())
+
+  fecha_hora      DateTime         @default(now())
+  precio_unitario Decimal          @db.Decimal(10, 2)
+  cantidad        Int
+  precio_total    Decimal          @db.Decimal(10, 2)
+  tickets         ticket_digital[]
+
+  FK_comprador comprador @relation(fields: [id_comprador], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id_comprador, cod])
+  @@map("ordenes")
+}
+
+model ticket_digital {
+  id_comprador Int
+  cod_orden    Int
+  cod          Int @default(autoincrement())
+
+  qr             String                @unique
+  estado         estado_ticket_digital @default(NO_ESCANEADO)
+  fecha_hora_uso DateTime?
+
+  FK_orden orden @relation(fields: [id_comprador, cod_orden], references: [id_comprador, cod])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id_comprador, cod_orden, cod])
+  @@map("tickets_digitales")
+}
+
+model asistente {
+  id Int @id @default(autoincrement())
+
+  t_doc    String
+  n_doc    String
+  nombre   String
+  apellido String
+  email    String @unique
+  telefono String @unique
+
+  asistencias asistencia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("asistentes")
+}
+
+model organizador {
+  id Int @id @default(autoincrement())
+
+  t_doc    String
+  n_doc    String
+  nombre   String
+  apellido String
+  email    String  @unique
+  telefono String  @unique
+  cuit     String?
+
+  eventos evento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizadores")
+}
+
+model comprador {
+  id Int @id @default(autoincrement())
+
+  t_doc    String
+  n_doc    String
+  nombre   String
+  apellido String
+  email    String @unique
+  telefono String @unique
+
+  ordenes orden[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("compradores")
+}
