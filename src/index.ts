@@ -47,4 +47,4 @@ app.listen(config.port, () => {
 
 app.use('/lugares', lugarRouter);
 
-app.use('organizadores', organizadorRouter);
+app.use('/organizadores', organizadorRouter);
