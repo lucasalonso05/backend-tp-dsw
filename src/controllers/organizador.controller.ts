@@ -17,7 +17,7 @@ export const getById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const organizador = await organizadorService.getById(Number(id));
     if (!organizador) {
-      return res.status(404).json({ error: 'Lugar no encontrado' });
+      return res.status(404).json({ error: 'organizadores no encontrado' });
     }
     res.status(200).json(organizador);
   } catch (error) {
@@ -49,7 +49,7 @@ export const update = async (req: Request, res: Response) => {
     const organizador = await organizadorService.update(Number(id), validation.data);
     res.status(200).json(organizador);
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar el lugar' });
+    res.status(500).json({ error: 'Error al actualizar el organizador' });
   }
 };
 
@@ -57,8 +57,8 @@ export const delete_ = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await organizadorService.delete_(Number(id));
-    res.status(200).json({ mensaje: 'Lugar eliminado correctamente' });
+    res.status(200).json({ mensaje: 'organizador eliminado correctamente' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar el lugar' });
+    res.status(500).json({ error: 'Error al eliminar el organizador' });
   }
 };
