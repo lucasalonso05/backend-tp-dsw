@@ -8,6 +8,7 @@ import lugarRouter from './routes/lugar.routes';
 import organizadorRouter from './routes/organizador.routes'
 import asistenteRouter from './routes/asistente.routes'
 import compradorRouter from './routes/comprador.routes'
+import eventoRouter from './routes/evento.routes'
 
 const app: Application = express();
 
@@ -53,3 +54,5 @@ app.use('/organizadores', organizadorRouter);
 app.use('/asistentes', asistenteRouter);
 
 app.use('/compradores', compradorRouter);
+
+app.use('/eventos', eventoRouter);
