@@ -54,14 +54,15 @@ export const update = async (req: Request, res: Response) => {
   }
 };
 
+
+// Modificación en el controlador (eliminas las líneas 60 a 63)
 export const delete_ = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validation = update_evento_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
-    const evento = await eventoService.delete_(Number(id), validation.data);
+
+    // Pasas un objeto vacío si el servicio sigue esperando un DTO
+    const evento = await eventoService.delete_(Number(id), {}); 
+
     res.status(200).json(evento);
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar el evento' });

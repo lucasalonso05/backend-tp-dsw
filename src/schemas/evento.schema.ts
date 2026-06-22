@@ -7,7 +7,8 @@ export const create_evento_schema = z.object({
   stock: z.number().int(),
   fecha_hora_inicio: z.string().datetime(),
   fecha_hora_fin: z.string().datetime(),
-  estado: z.enum(['PENDIENTE', 'CONFIRMADO', 'REALIZADO', 'CANCELADO']),
+  fecha_hora_cancelacion: z.string().datetime().nullable().optional(),
+  estado: z.enum(['PENDIENTE', 'CONFIRMADO', 'REALIZADO', 'CANCELADO']).default("PENDIENTE"),
   id_organizador: z.number().int().positive(),
   id_lugar: z.number().int().positive(),
 
