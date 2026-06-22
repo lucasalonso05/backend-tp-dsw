@@ -96,8 +96,7 @@ export const update = async (id: number, data: update_evento_DTO) => {
     const evento_actualizado = await prisma.evento.update({ 
       where: { id }, 
       data: {
-        ...data, // Pasamos todo lo que viene del DTO
-        // Forzamos explícitamente a Prisma a enviar null si corresponde
+        ...data, 
         fecha_hora_cancelacion: debeLimpiarCancelacion ? null : data.fecha_hora_cancelacion
       }
     });
