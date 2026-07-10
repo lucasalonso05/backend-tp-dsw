@@ -4,7 +4,7 @@ export const create_orden_schema = z.object({
   
   fecha_hora: z.string().datetime(),
   precio_unitario: z.number().positive().multipleOf(0.01),
-  cantidad: z.number().int(), 
+  cantidad: z.number().int().positive(), 
   id_comprador: z.number().int().positive(),
 
   });
