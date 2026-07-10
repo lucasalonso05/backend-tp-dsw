@@ -30,6 +30,7 @@ export const create = async (data: create_orden_DTO) => {
     if (!comprador) throw new Error('El comprador no existe');
 
     const precio_total = data.precio_unitario * data.cantidad;
+
       
     const orden_creada = await prisma.orden.create({ data: {...data, precio_total} });
       return orden_creada;

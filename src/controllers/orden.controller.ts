@@ -21,7 +21,7 @@ export const getById = async (req: Request, res: Response) => {
     }
     res.status(200).json(orden);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener la orden' });
+    res.status(500).json({ error: 'Error al obtener orden' });
   }
 };
 
@@ -36,7 +36,7 @@ export const create = async (req: Request, res: Response) => {
     const orden = await ordenService.create(validation.data);
     res.status(201).json(orden);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear la orden' });
+    res.status(500).json({ error: 'Error al crear orden' });
   }
 };
 
