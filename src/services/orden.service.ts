@@ -1,12 +1,13 @@
 import prisma from '../config/prisma'
 import { create_orden_DTO, update_orden_DTO } from '../schemas/orden.schema';
-
+import logger from '../config/logger'
 
 export const getAll = async () => {
   try {
     const ordenes = await prisma.orden.findMany();
     return ordenes;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener las ordenes');
   }
 };
@@ -16,6 +17,7 @@ export const getById = async (cod: number, id_comprador: number) => {
     const orden_encontrada = await prisma.orden.findUnique({ where: { id_comprador_cod: {id_comprador, cod } }});
     return orden_encontrada;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener orden');
   }
 };
@@ -35,6 +37,7 @@ export const create = async (data: create_orden_DTO) => {
     const orden_creada = await prisma.orden.create({ data: {...data, precio_total} });
       return orden_creada;
         } catch(error){
+          logger.error((error as Error).message);
             throw error;
     }
   };
