@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as ticketdigitalService from '../services/ticket_digital.service';
-import { create_ticketdigital_schema} from '../schemas/ticket_digital.schema';
+import { create_ticketdigital_schema, update_ticketdigital_schema} from '../schemas/ticket_digital.schema';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
@@ -37,3 +37,23 @@ export const create = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error al crear el ticket digital' });
   }
 };
+
+export const escanear = async (req: Request, res: Response) => {
+  try {
+    const { qr } = req.body;
+    if (!qr || typeof qr !== 'string') {
+      return res.status(400).json({ error: 'Debe enviar un código QR válido' });
+    }
+    const ticket_actualizado = await ticketdigitalService.escanear(qr);
+    res.status(200).json(ticket_actualizado);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+};
+    
+    
+    
+    
+    
+    
+    

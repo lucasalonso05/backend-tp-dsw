@@ -46,32 +46,7 @@ export const create = async (data: create_evento_DTO) => {
 };
 
 
-//export const update = async (id: number, data: update_evento_DTO) => {
-//  try{
-//      if (data.id_organizador){
-//        const organizador = await prisma.organizador.findUnique({
-//          where: { id: data.id_organizador }
-//      }); 
-//      if (!organizador) throw new Error('El organizador no existe');
-//    }
-//
-//      if (data.id_lugar) {
-//        const lugar = await prisma.lugar.findUnique({
-//        where: { id: data.id_lugar }
-//        });
-//      if (!lugar) throw new Error('El lugar no existe');
-//      if (data.estado && data.estado !== 'CANCELADO') {
-//        data.fecha_hora_cancelacion = null;
-//      }   
-//      }
-//        const evento_actualizado = await prisma.evento.update({where: { id }, data});
-//      
-//        return evento_actualizado;
-//    
-//  } catch(error){
-//      throw error;
-//  }
-//};
+
 
   
 export const update = async (id: number, data: update_evento_DTO) => {

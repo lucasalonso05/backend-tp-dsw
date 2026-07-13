@@ -2,7 +2,6 @@ import {z} from 'zod';
 
 export const create_ticketdigital_schema = z.object({
   
-  qr: z.string(),
   estado: z.enum(['ESCANEADO', 'NO_ESCANEADO']).default("NO_ESCANEADO"),
   fecha_hora_uso: z.string().datetime().optional(),
   cod_orden: z.number().int().positive(),

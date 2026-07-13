@@ -1,5 +1,6 @@
+import logger from '../config/logger';
 import prisma from '../config/prisma'
-import { create_ticketdigital_DTO} from '../schemas/ticket_digital.schema';
+import { create_ticketdigital_DTO, update_ticketdigital_DTO} from '../schemas/ticket_digital.schema';
 import { v4 as uuidv4 } from 'uuid';
 
 export const getAll = async () => {
@@ -7,6 +8,7 @@ export const getAll = async () => {
     const tickets = await prisma.ticket_digital.findMany();
     return tickets;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener tickets digitales');
   }
 };
@@ -19,6 +21,7 @@ export const getById = async (id_comprador: number, cod_orden: number, cod: numb
     return ticket_encontrado;
 
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener ticket');
   }
 };
@@ -50,7 +53,29 @@ export const create = async (data: create_ticketdigital_DTO) => {
     const ticket_digital_creado = await prisma.ticket_digital.create({data: {...data, qr}});
     return ticket_digital_creado;
   } catch (error) {
+    logger.error((error as Error).message);
     throw error;
   }
-};
+  };
 
+export const escanear = async (qr: string) => {
+
+  try{
+    const ticket = await prisma.ticket_digital.findUnique({where: {qr}});
+    if(!ticket) throw new Error ('El ticket no existe');
+    if (ticket.estado === 'ESCANEADO') throw new Error ('El ticket ya fue escaneado');
+
+    const ticket_actualizado = await prisma.ticket_digital.update({
+      where: {qr}, 
+      data: {
+        estado: 'ESCANEADO',
+        fecha_hora_uso: new Date(),
+      }
+    });
+    return ticket_actualizado;
+  } catch (error) {
+    logger.error((error as Error).message);
+    throw error;
+  }
+
+};
