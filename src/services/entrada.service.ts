@@ -1,3 +1,4 @@
+import logger from '../config/logger';
 import prisma from '../config/prisma'
 import { create_entrada_DTO, update_entrada_DTO } from '../schemas/entrada.schema';
 
@@ -6,6 +7,7 @@ export const getAll = async () => {
     const entradas = await prisma.entrada.findMany();
     return entradas;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener las entradas');
   }
 };
@@ -17,6 +19,7 @@ export const getById = async (id_evento: number, cod: number) => {
     });
     return entrada_encontrada;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener entrada');
   }
 };
@@ -31,6 +34,7 @@ export const create = async (data: create_entrada_DTO) => {
     const entrada_creada = await prisma.entrada.create({ data });
     return entrada_creada;
   } catch (error) {
+    logger.error((error as Error).message);
     throw error;
   }
 };
@@ -50,6 +54,7 @@ export const update = async (id_evento: number, cod: number, data: update_entrad
     });
     return entrada_actualizada;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('No se pudo actualizar la entrada');
   }
 };
@@ -61,6 +66,7 @@ export const delete_ = async (id_evento: number, cod: number) => {
     });
     return entrada_eliminada;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('No se pudo eliminar la entrada');
   }
 };

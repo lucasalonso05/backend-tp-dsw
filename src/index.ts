@@ -11,6 +11,7 @@ import compradorRouter from './routes/comprador.routes'
 import eventoRouter from './routes/evento.routes'
 import ordenRouter from './routes/orden.routes'
 import entradaRouter from './routes/entrada.routes'
+import ticketdigitalRouter from './routes/ticket_digital.routes'
 
 const app: Application = express();
 
@@ -60,4 +61,7 @@ app.use('/compradores', compradorRouter);
 app.use('/eventos', eventoRouter);
 
 app.use('/ordenes', ordenRouter);
+
 app.use('/entradas', entradaRouter)
+
+app.use('/ticketsdigital', ticketdigitalRouter)

@@ -1,3 +1,4 @@
+import logger from '../config/logger';
 import prisma from '../config/prisma'
 import { estado_evento } from '../generated/prisma/index.js';
 import { create_evento_DTO, update_evento_DTO } from '../schemas/evento.schema';
@@ -8,6 +9,7 @@ export const getAll = async () => {
     const eventos = await prisma.evento.findMany();
     return eventos;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener los eventos');
   }
 };
@@ -17,6 +19,7 @@ export const getById = async (id: number) => {
     const evento_encontrado = await prisma.evento.findUnique({ where: { id } });
     return evento_encontrado;
   } catch (error) {
+    logger.error((error as Error).message);
     throw new Error('Error al obtener evento');
   }
 };
@@ -35,43 +38,16 @@ export const create = async (data: create_evento_DTO) => {
     });
     if (!lugar) throw new Error('El lugar no existe');
 
-
-    
+   
         const evento_creado = await prisma.evento.create({ data });
         return evento_creado;
     
   } catch(error){
+    logger.error((error as Error).message);
       throw error;
   }
 };
 
-
-//export const update = async (id: number, data: update_evento_DTO) => {
-//  try{
-//      if (data.id_organizador){
-//        const organizador = await prisma.organizador.findUnique({
-//          where: { id: data.id_organizador }
-//      }); 
-//      if (!organizador) throw new Error('El organizador no existe');
-//    }
-//
-//      if (data.id_lugar) {
-//        const lugar = await prisma.lugar.findUnique({
-//        where: { id: data.id_lugar }
-//        });
-//      if (!lugar) throw new Error('El lugar no existe');
-//      if (data.estado && data.estado !== 'CANCELADO') {
-//        data.fecha_hora_cancelacion = null;
-//      }   
-//      }
-//        const evento_actualizado = await prisma.evento.update({where: { id }, data});
-//      
-//        return evento_actualizado;
-//    
-//  } catch(error){
-//      throw error;
-//  }
-//};
 
   
 export const update = async (id: number, data: update_evento_DTO) => {
@@ -90,7 +66,6 @@ export const update = async (id: number, data: update_evento_DTO) => {
       if (!lugar) throw new Error('El lugar no existe');
     }
 
-    // Determinamos si hay que limpiar la fecha de cancelación
     const debeLimpiarCancelacion = data.estado && data.estado !== 'CANCELADO';
 
     const evento_actualizado = await prisma.evento.update({ 
@@ -104,6 +79,7 @@ export const update = async (id: number, data: update_evento_DTO) => {
     return evento_actualizado;
 
   } catch(error){
+    logger.error((error as Error).message);
     throw error;
   }
 };
@@ -127,6 +103,7 @@ export const delete_ = async (id: number, data: update_evento_DTO) => {
           return evento_cancelado;
       
   }catch(error){
+    logger.error((error as Error).message);
       throw error;
   }
 };
