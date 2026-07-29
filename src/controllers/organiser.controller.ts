@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import * as organizadorService from '../services/organizador.service';
-import {create_organizador_schema, update_organizador_schema,} from '../schemas/organizador.schema';
+import * as organiserService from '../services/organiser.service';
+import {create_organiser_schema, update_organiser_schema,} from '../schemas/organiser.schema';
 
 
 export const getAll = async (req: Request, res: Response) => {
   try {
-    const organizadores = await organizadorService.getAll();
-    res.status(200).json(organizadores);
+    const organisers = await organiserService.getAll();
+    res.status(200).json(organisers);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener organizadores' });
   }
@@ -15,11 +15,11 @@ export const getAll = async (req: Request, res: Response) => {
 export const getById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organizador = await organizadorService.getById(Number(id));
-    if (!organizador) {
-      return res.status(404).json({ error: 'organizadores no encontrado' });
+    const organiser = await organiserService.getById(Number(id));
+    if (!organiser) {
+      return res.status(404).json({ error: 'Organizador no encontrado' });
     }
-    res.status(200).json(organizador);
+    res.status(200).json(organiser);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener el organizador' });
   }
@@ -27,13 +27,13 @@ export const getById = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   try {
-    const validation = create_organizador_schema.safeParse(req.body);
+    const validation = create_organiser_schema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.issues});
     }
    
-    const organizador = await organizadorService.create(validation.data);
-    res.status(201).json(organizador);
+    const organiser = await organiserService.create(validation.data);
+    res.status(201).json(organiser);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear el organizador' });
   }
@@ -42,12 +42,12 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validation = update_organizador_schema.safeParse(req.body);
+    const validation = update_organiser_schema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.issues });
     }
-    const organizador = await organizadorService.update(Number(id), validation.data);
-    res.status(200).json(organizador);
+    const organiser = await organiserService.update(Number(id), validation.data);
+    res.status(200).json(organiser);
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar el organizador' });
   }
@@ -56,7 +56,7 @@ export const update = async (req: Request, res: Response) => {
 export const delete_ = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await organizadorService.delete_(Number(id));
+    await organiserService.delete_(Number(id));
     res.status(200).json({ mensaje: 'organizador eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar el organizador' });

@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import { config } from './config/config';
 import logger from './config/logger';
 import placeRouter from './routes/place.routes';
-import organizadorRouter from './routes/organizador.routes'
+import organiserRouter from './routes/organiser.routes.js'
 import assistantRouter from './routes/assistant.routes'
 import buyerRouter from './routes/buyer.routes'
 import eventRouter from './routes/event.routes'
@@ -52,7 +52,7 @@ app.listen(config.port, () => {
 
 app.use('/lugares', placeRouter);
 
-app.use('/organizadores', organizadorRouter);
+app.use('/organizadores', organiserRouter);
 
 app.use('/asistentes', assistantRouter);
 
