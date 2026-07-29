@@ -8,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum state_event{
+enum status_event{
   PENDING
   CONFIRMED
   FULFILLED
@@ -16,7 +16,7 @@ enum state_event{
   
 }
 
-enum state_digital_ticket{
+enum status_digital_ticket{
   UNSCANNED
   SCANNED
   
@@ -45,7 +45,7 @@ model event {
   category String
   date_time_start DateTime 
   date_time_end DateTime
-  state event_state @default(PENDIENTE)
+  status event_status @default(PENDIENTE)
   stock Int
   entries entry[]
   assists assist[]
@@ -120,7 +120,7 @@ model digital_ticket{
   code Int @default(autoincrement())
   
   qr String @unique
-  state state_digital_ticket @default(NO_ESCANEADO)
+  status status_digital_ticket @default(NO_ESCANEADO)
   date_time_use DateTime?
   
   FK_order order @relation(fields: [id_buyer, code_order], references: [id_buyer, code])
