@@ -12,7 +12,7 @@ enum state_event{
   PENDING
   CONFIRMED
   FULFILLED
-  CANCELED
+  CANCELLED
   
 }
 

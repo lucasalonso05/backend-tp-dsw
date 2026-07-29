@@ -2,12 +2,12 @@ import { z } from 'zod';
 
 export const create_assistant_schema = z.object({
 
-  t_doc: z.string().min(1),
-  n_doc: z.string().min(7).max(10),
-  nombre: z.string().min(1),
-  apellido: z.string().min(1),
+ doc_type: z.string().min(1),
+  doc_number: z.string().min(7).max(10),
+  name: z.string().min(1),
+  surname: z.string().min(1),
   email: z.string().min(1),
-  telefono: z.string().min(1).max(15),
+  telephone: z.string().min(1).max(15),
 });
 
 

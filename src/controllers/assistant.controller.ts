@@ -57,7 +57,7 @@ export const delete_ = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await assistantService.delete_(Number(id));
-    res.status(200).json({ mensaje: 'asistente eliminado correctamente' });
+    res.status(200).json({ mensaje: 'Asistente eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar el asistente' });
   }
