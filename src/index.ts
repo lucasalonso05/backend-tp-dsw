@@ -6,7 +6,7 @@ import { config } from './config/config';
 import logger from './config/logger';
 import lugarRouter from './routes/lugar.routes';
 import organizadorRouter from './routes/organizador.routes'
-import asistenteRouter from './routes/asistente.routes'
+import assistantRouter from './routes/assistant.routes'
 import compradorRouter from './routes/comprador.routes'
 import eventoRouter from './routes/evento.routes'
 import ordenRouter from './routes/orden.routes'
@@ -54,7 +54,7 @@ app.use('/lugares', lugarRouter);
 
 app.use('/organizadores', organizadorRouter);
 
-app.use('/asistentes', asistenteRouter);
+app.use('/asistentes', assistantRouter);
 
 app.use('/compradores', compradorRouter);
 

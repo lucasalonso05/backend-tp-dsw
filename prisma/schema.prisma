@@ -8,184 +8,186 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum estado_evento{
-  PENDIENTE
-  CONFIRMADO
-  REALIZADO
-  CANCELADO
+enum state_event{
+  PENDING
+  CONFIRMED
+  FULFILLED
+  CANCELED
+  
 }
 
-enum estado_ticket_digital{
-  NO_ESCANEADO
-  ESCANEADO
+enum state_digital_ticket{
+  UNSCANNED
+  SCANNED
+  
 }
 
-model asistencia {
-  id_asistente Int
-  id_evento Int
+model assists {
+  id_assistant Int
+  id_event Int
 
-  fecha_hora_asistencia DateTime?
+  date_time_assist DateTime?
 
-  FK_asistente asistente @relation(fields: [id_asistente], references: [id])
-  FK_evento evento @relation(fields: [id_evento], references: [id])
-  @@id([id_asistente, id_evento])
+  FK_assistant assistant @relation(fields: [id_assistant], references: [id])
+  FK_event event @relation(fields: [id_event], references: [id])
+  @@id([id_assistant, id_event])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("asistencias")
+  @@map("assists")
 }
 
-model evento {
+model event {
   id Int @id @default (autoincrement())
 
-  titulo String
-  categoria String
-  fecha_hora_inicio DateTime 
-  fecha_hora_fin DateTime
-  estado estado_evento @default(PENDIENTE)
+  title String
+  category String
+  date_time_start DateTime 
+  date_time_end DateTime
+  state event_state @default(PENDIENTE)
   stock Int
-  entradas entrada[]
-  asistencias asistencia[]
+  entries entry[]
+  assists assist[]
     
-  id_organizador Int
-  id_lugar Int
-  fecha_hora_creacion DateTime @default(now())
-  fecha_hora_cancelacion DateTime?
+  id_organiser Int
+  id_place Int
+  date_time_creation DateTime @default(now())
+  date_time_cancellation DateTime?
   
-  FK_lugar lugar @relation(fields: [id_lugar], references: [id]) 
-  FK_organizador organizador @relation(fields: [id_organizador], references: [id]) 
+  FK_place place @relation(fields: [id_place], references: [id]) 
+  FK_organiser organiser @relation(fields: [id_organiser], references: [id]) 
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  @@map("eventos")
+  @@map("events")
 }
 
-model lugar{
+model place{
   id Int @id @default (autoincrement())
-  capacidad Int
-  descripcion String?
-  ciudad String
-  calle String
-  altura String
-  cp Int
-  provincia String
+  capacity Int
+  description String?
+  city String
+  street String
+  street_number String
+  zip_code Int
+  province String
 
-  eventos evento[]
+  events event[]
   
-  @@map("lugares")
+  @@map("places")
 }
 
-model entrada{
-  id_evento Int
-  cod Int  @default(autoincrement())
-  tipo_entrada String
-  precio_unitario Decimal @db.Decimal(10, 2)
-  horario_inicio DateTime
-  horario_fin DateTime
-  @@id([id_evento, cod])
-  FK_evento evento @relation(fields: [id_evento], references: [id])
+model entry{
+  id_event Int
+  code Int  @default(autoincrement())
+  entry_type String
+  unit_price Decimal @db.Decimal(10, 2)
+  date_time_start DateTime
+  date_time_end DateTime
+  @@id([id_event, code])
+  FK_event event @relation(fields: [id_event], references: [id])
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  @@map("entradas")
+  @@map("entries")
 }
 
-model orden{
-  id_comprador Int
-  cod Int  @default(autoincrement())
+model order{
+  id_buyer Int
+  code Int  @default(autoincrement())
   
-  fecha_hora DateTime @default(now())
-  precio_unitario Decimal @db.Decimal(10, 2)
-  cantidad Int
-  precio_total Decimal @db.Decimal(10, 2)
+  date_time DateTime @default(now())
+  unit_price Decimal @db.Decimal(10, 2)
+  quantity Int
+  total_price Decimal @db.Decimal(10, 2)
   tickets ticket_digital[]
   
-  FK_comprador comprador @relation(fields: [id_comprador], references: [id])
-  @@id([id_comprador, cod])
+  FK_buyer buyer @relation(fields: [id_buyer], references: [id])
+  @@id([id_buyer, code])
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("ordenes")
+  @@map("orders")
 }
 
-model ticket_digital{
-  id_comprador Int
-  cod_orden Int
-  cod Int @default(autoincrement())
+model digital_ticket{
+  id_buyer Int
+  code_order Int
+  code Int @default(autoincrement())
   
   qr String @unique
-  estado estado_ticket_digital @default(NO_ESCANEADO)
-  fecha_hora_uso DateTime?
+  state state_digital_ticket @default(NO_ESCANEADO)
+  date_time_use DateTime?
   
-  FK_orden orden @relation(fields: [id_comprador, cod_orden], references: [id_comprador, cod])
-  @@id([id_comprador, cod_orden, cod])
+  FK_order order @relation(fields: [id_buyer, code_order], references: [id_buyer, code])
+  @@id([id_buyer, code_order, code])
 
-  id_asistente  Int      @unique  // @unique porque es 1:1
-  FK_asistente  asistente @relation(fields: [id_asistente], references: [id])
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("tickets_digitales")
-}
-
-model asistente{
-  id Int @id @default(autoincrement())
-  
-  t_doc String
-  n_doc String
-  nombre String
-  apellido String
-  email String @unique
-  telefono String @unique
-
-  ticket ticket_digital?
-  
-  asistencias asistencia[]
+  id_assistant  Int      @unique  // @unique porque es 1:1
+  FK_assistant  assistant @relation(fields: [id_assistant], references: [id])
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("asistentes")
+  @@map("digital_tickets")
 }
 
-model organizador{
+model assistant{
+  id Int @id @default(autoincrement())
+  
+  doc_type String
+  doc_number String
+  name String
+  surname String
+  email String @unique
+  telephone String @unique
+
+  ticket digital_ticket?
+  
+  assists assist[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assists")
+}
+
+model organiser{
   id Int @id @default(autoincrement())
 
-  t_doc String
-  n_doc String
-  nombre String
-  apellido String
+  doc_type String
+  doc_number String
+  name String
+  surname String
   email String @unique
-  telefono String @unique
+  telephone String @unique
   cuit String?
 
-  eventos evento[]
+  events event[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("organizadores")
+  @@map("organisers")
 }
 
-model comprador{
+model buyer{
   id Int @id @default(autoincrement())
 
-  t_doc String
-  n_doc String
-  nombre String
-  apellido String
+  doc_type String
+  doc_number String
+  name String
+  surname String
   email String @unique
-  telefono String @unique
-
-  ordenes orden[]
+  telephone String @unique
+ 
+  orders order[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  @@map("compradores")
+  @@map("buyers")
 }
