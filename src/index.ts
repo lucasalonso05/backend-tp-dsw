@@ -7,7 +7,7 @@ import logger from './config/logger';
 import lugarRouter from './routes/lugar.routes';
 import organizadorRouter from './routes/organizador.routes'
 import assistantRouter from './routes/assistant.routes'
-import compradorRouter from './routes/comprador.routes'
+import compradorRouter from './routes/buyer.routes'
 import eventoRouter from './routes/evento.routes'
 import ordenRouter from './routes/orden.routes'
 import entradaRouter from './routes/entrada.routes'

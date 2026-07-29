@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import * as entradaController from '../controllers/entrada.controller';
+import * as entryController from '../controllers/entry.controller';
 
 const router = Router();
 
-router.get('/', entradaController.getAll);
-router.get('/:id_evento/:cod', entradaController.getById);
-router.post('/', entradaController.create);
-router.put('/:id_evento/:cod', entradaController.update);
-router.delete('/:id_evento/:cod', entradaController.delete_);
+router.get('/', entryController.getAll);
+router.get('/:id_evento/:cod', entryController.getById);
+router.post('/', entryController.create);
+router.put('/:id_evento/:cod', entryController.update);
+router.delete('/:id_evento/:cod', entryController.delete_);
 
 export default router;
