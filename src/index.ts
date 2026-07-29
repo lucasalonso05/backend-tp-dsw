@@ -10,7 +10,7 @@ import assistantRouter from './routes/assistant.routes'
 import compradorRouter from './routes/buyer.routes'
 import eventoRouter from './routes/evento.routes'
 import ordenRouter from './routes/orden.routes'
-import entradaRouter from './routes/entrada.routes'
+import entradaRouter from './routes/entry.routes'
 import ticketdigitalRouter from './routes/ticket_digital.routes'
 
 const app: Application = express();
