@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/config';
 import logger from './config/logger';
-import lugarRouter from './routes/lugar.routes';
+import lugarRouter from './routes/place.routes';
 import organizadorRouter from './routes/organizador.routes'
 import assistantRouter from './routes/assistant.routes'
 import compradorRouter from './routes/buyer.routes'

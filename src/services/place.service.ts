@@ -1,12 +1,12 @@
 import logger from '../config/logger'
 import  prisma from '../config/prisma'
-import { create_lugar_DTO, update_lugar_DTO } from '../schemas/lugar.schema';
+import { create_place_DTO, update_place_DTO } from '../schemas/place.schema';
 
 
 export const getAll = async () => {
   try {
-    const lugares = await prisma.lugar.findMany();
-    return lugares;
+    const places = await prisma.place.findMany();
+    return places;
   } catch (error) {
     logger.error((error as Error).message);
     throw new Error('Error al obtener los lugares');
@@ -15,31 +15,31 @@ export const getAll = async () => {
 
 export const getById = async (id: number) => {
   try {
-    const lugar_encontrado = await prisma.lugar.findUnique({ where: { id } });
-    return lugar_encontrado;
+    const place_found = await prisma.place.findUnique({ where: { id } });
+    return place_found;
   } catch (error) {
     logger.error((error as Error).message);
     throw new Error('Error al obtener lugar');
   }
 };
 
-export const create = async (data: create_lugar_DTO) => {
+export const create = async (data: create_place_DTO) => {
   try {
-    const lugar_creado = await prisma.lugar.create({ data });
-    return lugar_creado;
+    const place_created = await prisma.place.create({ data });
+    return place_created;
   } catch (error) {
     logger.error((error as Error).message);
     throw new Error('No se pudo crear lugar');
   }
 };
 
-export const update = async (id: number, data: update_lugar_DTO) => {
+export const update = async (id: number, data: update_place_DTO) => {
   try {
-    const lugar_actualizado = await prisma.lugar.update({
+    const place_updated = await prisma.place.update({
       where: { id },
       data,
     });
-    return lugar_actualizado;
+    return place_updated;
   } catch (error) {
     logger.error((error as Error).message);
     throw new Error('No se pudo actualizar lugar');
@@ -48,8 +48,8 @@ export const update = async (id: number, data: update_lugar_DTO) => {
 
 export const delete_ = async (id: number) => {
   try {
-    const lugar_eliminado = await prisma.lugar.delete({ where: { id } });
-    return lugar_eliminado;
+    const place_deleted = await prisma.place.delete({ where: { id } });
+    return place_deleted;
   } catch (error) {
     logger.error((error as Error).message);
     throw new Error('No se pudo borrar lugar');
