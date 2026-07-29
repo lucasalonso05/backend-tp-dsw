@@ -9,7 +9,7 @@ import organiserRouter from './routes/organiser.routes.js'
 import assistantRouter from './routes/assistant.routes'
 import buyerRouter from './routes/buyer.routes'
 import eventRouter from './routes/event.routes'
-import ordenRouter from './routes/orden.routes'
+import orderRouter from './routes/order.routes'
 import entryRouter from './routes/entry.routes'
 import ticketdigitalRouter from './routes/ticket_digital.routes'
 
@@ -60,8 +60,8 @@ app.use('/compradores', buyerRouter);
 
 app.use('/eventos', eventRouter);
 
-app.use('/ordenes', ordenRouter);
+app.use('/ordenes', orderRouter);
 
-app.use('/entradas', entryRouter)
+app.use('/entradas', entryRouter);
 
-app.use('/ticketsdigital', ticketdigitalRouter)
+app.use('/ticketsdigital', ticketdigitalRouter);
