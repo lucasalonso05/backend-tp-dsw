@@ -4,14 +4,14 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/config';
 import logger from './config/logger';
-import lugarRouter from './routes/lugar.routes';
-import organizadorRouter from './routes/organizador.routes'
-import asistenteRouter from './routes/asistente.routes'
-import compradorRouter from './routes/comprador.routes'
-import eventoRouter from './routes/evento.routes'
-import ordenRouter from './routes/orden.routes'
-import entradaRouter from './routes/entrada.routes'
-import ticketdigitalRouter from './routes/ticket_digital.routes'
+import placeRouter from './routes/place.routes';
+import organiserRouter from './routes/organiser.routes.js'
+import assistantRouter from './routes/assistant.routes'
+import buyerRouter from './routes/buyer.routes'
+import eventRouter from './routes/event.routes'
+import orderRouter from './routes/order.routes'
+import entryRouter from './routes/entry.routes'
+import digitalticketRouter from './routes/digitalticket.routes'
 
 const app: Application = express();
 
@@ -50,18 +50,18 @@ app.listen(config.port, () => {
 });
 
 
-app.use('/lugares', lugarRouter);
+app.use('/lugares', placeRouter);
 
-app.use('/organizadores', organizadorRouter);
+app.use('/organizadores', organiserRouter);
 
-app.use('/asistentes', asistenteRouter);
+app.use('/asistentes', assistantRouter);
 
-app.use('/compradores', compradorRouter);
+app.use('/compradores', buyerRouter);
 
-app.use('/eventos', eventoRouter);
+app.use('/eventos', eventRouter);
 
-app.use('/ordenes', ordenRouter);
+app.use('/ordenes', orderRouter);
 
-app.use('/entradas', entradaRouter)
+app.use('/entradas', entryRouter);
 
-app.use('/ticketsdigital', ticketdigitalRouter)
+app.use('/ticketsdigital', digitalticketRouter);
