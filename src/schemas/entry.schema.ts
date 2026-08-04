@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
 export const create_entry_schema = z.object({
-  entry_type: z.string().min(1),
-  unit_price: z.number().min(1),
+  entry_name: z.string().min(1),
+  entry_description: z.string().optional(),
+  unit_price: z.number().positive().multipleOf(0.01),
   date_time_start: z.iso.datetime(),
   date_time_end: z.iso.datetime(),
+  stock: z.number().int().positive(),
   id_event: z.number().int().positive(),
 });
 

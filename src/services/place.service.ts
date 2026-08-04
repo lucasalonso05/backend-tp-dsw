@@ -25,16 +25,26 @@ export const getById = async (id: number) => {
 
 export const create = async (data: create_place_DTO) => {
   try {
+    const owner = await prisma.user.findUnique({ where: { id: data.id_user } });
+    if (!owner) throw new Error('El usuario no existe');
+    if (owner.role !== 'ORGANISER') throw new Error('El usuario no es un organizador');
+
     const place_created = await prisma.place.create({ data });
     return place_created;
   } catch (error) {
     logger.error((error as Error).message);
-    throw new Error('No se pudo crear lugar');
+    throw error;
   }
 };
 
 export const update = async (id: number, data: update_place_DTO) => {
   try {
+    if (data.id_user) {
+      const owner = await prisma.user.findUnique({ where: { id: data.id_user } });
+      if (!owner) throw new Error('El usuario no existe');
+      if (owner.role !== 'ORGANISER') throw new Error('El usuario no es un organizador');
+    }
+
     const place_updated = await prisma.place.update({
       where: { id },
       data,
@@ -42,7 +52,7 @@ export const update = async (id: number, data: update_place_DTO) => {
     return place_updated;
   } catch (error) {
     logger.error((error as Error).message);
-    throw new Error('No se pudo actualizar lugar');
+    throw error;
   }
 };
 

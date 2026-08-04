@@ -4,8 +4,8 @@ import * as digitalticketController from '../controllers/digitalticket.controlle
 const router = Router();
 
 router.get('/', digitalticketController.getAll);
-router.post('/escanear', digitalticketController.escanear);
-router.get('/:id_comprador/:cod_orden/:cod', digitalticketController.getById);
+router.post('/scan', digitalticketController.scan);
+router.get('/:id', digitalticketController.getById);
 router.post('/', digitalticketController.create);
 
 export default router;

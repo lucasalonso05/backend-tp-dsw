@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
 export const create_place_schema = z.object({
-  capacidad: z.number().int(),
-  descripcion: z.string().optional(),
-  ciudad: z.string().min(1),
-  calle: z.string().min(1),
-  altura: z.string().min(1),
-  cp: z.number().int().min(1),
-  provincia: z.string().min(1),
+  name: z.string().min(1),
+  capacity: z.number().int().positive(),
+  description: z.string().optional(),
+  province: z.string().min(1),
+  city: z.string().min(1),
+  street: z.string().min(1),
+  street_number: z.string().min(1),
+  zip_code: z.string().min(1),
+  id_user: z.number().int().positive(),
 });
 
 export const update_place_schema = create_place_schema.partial();

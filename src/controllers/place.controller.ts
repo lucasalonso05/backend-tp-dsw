@@ -36,7 +36,7 @@ export const create = async (req: Request, res: Response) => {
     const place = await placeService.create(validation.data);
     res.status(201).json(place);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear el lugar' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
@@ -50,7 +50,7 @@ export const update = async (req: Request, res: Response) => {
     const place = await placeService.update(Number(id), validation.data);
     res.status(200).json(place);
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar el lugar' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 

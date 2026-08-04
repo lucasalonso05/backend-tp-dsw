@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as digitalticketService from '../services/digitalticket.service';
-import { create_digitalticket_schema, update_digitalticket_schema} from '../schemas/digitalticket.schema';
+import { create_digitalticket_schema } from '../schemas/digitalticket.schema';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
@@ -13,8 +13,8 @@ export const getAll = async (req: Request, res: Response) => {
 
 export const getById = async (req: Request, res: Response) => {
   try {
-    const { id_buyer, code_order, code } = req.params;
-    const ticket = await digitalticketService.getById(Number(id_buyer), Number(code_order), Number(code));
+    const { id } = req.params;
+    const ticket = await digitalticketService.getById(Number(id));
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket no encontrado' });
     }
@@ -34,26 +34,19 @@ export const create = async (req: Request, res: Response) => {
     const ticket = await digitalticketService.create(validation.data);
     res.status(201).json(ticket);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear el ticket digital' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
 export const scan = async (req: Request, res: Response) => {
   try {
-    const { qr } = req.body;
-    if (!qr || typeof qr !== 'string') {
+    const { qr_code } = req.body;
+    if (!qr_code || typeof qr_code !== 'string') {
       return res.status(400).json({ error: 'Debe enviar un código QR válido' });
     }
-    const ticket_updated = await digitalticketService.scan(qr);
+    const ticket_updated = await digitalticketService.scan(qr_code);
     res.status(200).json(ticket_updated);
   } catch (error) {
     res.status(400).json({ error: (error as Error).message });
   }
 };
-    
-    
-    
-    
-    
-    
-    

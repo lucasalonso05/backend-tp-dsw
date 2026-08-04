@@ -13,8 +13,8 @@ export const getAll = async (req: Request, res: Response) => {
 
 export const getById = async (req: Request, res: Response) => {
   try {
-    const { id_event, cod } = req.params;
-    const entry = await entryService.getById(Number(id_event), Number(cod));
+    const { id } = req.params;
+    const entry = await entryService.getById(Number(id));
     if (!entry) {
       return res.status(404).json({ error: 'Entrada no encontrada' });
     }
@@ -34,28 +34,28 @@ export const create = async (req: Request, res: Response) => {
     const entry = await entryService.create(validation.data);
     res.status(201).json(entry);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear la entrada' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
 export const update = async (req: Request, res: Response) => {
   try {
-    const { id_event, cod } = req.params;
+    const { id } = req.params;
     const validation = update_entry_schema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.issues });
     }
-    const entry = await entryService.update(Number(id_event), Number(cod), validation.data);
+    const entry = await entryService.update(Number(id), validation.data);
     res.status(200).json(entry);
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar la entrada' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
 export const delete_ = async (req: Request, res: Response) => {
   try {
-    const { id_event, cod } = req.params;
-    const entry = await entryService.delete_(Number(id_event), Number(cod));
+    const { id } = req.params;
+    const entry = await entryService.delete_(Number(id));
     res.status(200).json(entry);
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar la entrada' });

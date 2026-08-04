@@ -5,9 +5,7 @@ import morgan from 'morgan';
 import { config } from './config/config';
 import logger from './config/logger';
 import placeRouter from './routes/place.routes';
-import organiserRouter from './routes/organiser.routes.js'
-import assistantRouter from './routes/assistant.routes'
-import buyerRouter from './routes/buyer.routes'
+import userRouter from './routes/user.routes'
 import eventRouter from './routes/event.routes'
 import orderRouter from './routes/order.routes'
 import entryRouter from './routes/entry.routes'
@@ -37,6 +35,18 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ mensaje: '¡Servidor de Eventify funcionando! 🎉' });
 });
 
+app.use('/places', placeRouter);
+
+app.use('/users', userRouter);
+
+app.use('/events', eventRouter);
+
+app.use('/orders', orderRouter);
+
+app.use('/entries', entryRouter);
+
+app.use('/digital-tickets', digitalticketRouter);
+
 // ── Middleware de errores globales ──────────────────────
 // Va siempre AL FINAL — captura cualquier error no manejado
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -48,20 +58,3 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.listen(config.port, () => {
   logger.info(`Servidor corriendo en http://localhost:${config.port}`);
 });
-
-
-app.use('/lugares', placeRouter);
-
-app.use('/organizadores', organiserRouter);
-
-app.use('/asistentes', assistantRouter);
-
-app.use('/compradores', buyerRouter);
-
-app.use('/eventos', eventRouter);
-
-app.use('/ordenes', orderRouter);
-
-app.use('/entradas', entryRouter);
-
-app.use('/ticketsdigital', digitalticketRouter);
