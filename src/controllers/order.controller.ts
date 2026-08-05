@@ -14,8 +14,8 @@ export const getAll = async (req: Request, res: Response) => {
 
 export const getById = async (req: Request, res: Response) => {
   try {
-    const { id_buyer, code } = req.params;
-    const order = await orderService.getById(Number(id_buyer), Number(code));
+    const { id } = req.params;
+    const order = await orderService.getById(Number(id));
     if (!order) {
       return res.status(404).json({ error: 'Orden no encontrada' });
     }
@@ -27,16 +27,28 @@ export const getById = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   try {
-    // Primero validar con Zod
     const validation = create_order_schema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.issues});
     }
-   
+
     const order = await orderService.create(validation.data);
     res.status(201).json(order);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear orden' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
+export const update = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validation = update_order_schema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.issues });
+    }
+    const order = await orderService.update(Number(id), validation.data);
+    res.status(200).json(order);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+};

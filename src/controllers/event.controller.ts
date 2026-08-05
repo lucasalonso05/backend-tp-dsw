@@ -37,7 +37,7 @@ export const create = async (req: Request, res: Response) => {
     const event = await eventService.create(validation.data);
     res.status(201).json(event);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear el evento' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
@@ -51,19 +51,15 @@ export const update = async (req: Request, res: Response) => {
     const event = await eventService.update(Number(id), validation.data);
     res.status(200).json(event);
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar el evento' });
+    res.status(400).json({ error: (error as Error).message });
   }
 };
 
 
-// Modificación en el controlador (eliminas las líneas 60 a 63)
 export const delete_ = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    // Pasas un objeto vacío si el servicio sigue esperando un DTO
-    const event = await eventService.delete_(Number(id), {}); 
-
+    const event = await eventService.delete_(Number(id));
     res.status(200).json(event);
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar el evento' });
