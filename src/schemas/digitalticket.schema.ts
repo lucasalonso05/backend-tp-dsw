@@ -8,7 +8,7 @@ export const create_digitalticket_schema = z.object({
   });
 
 export const update_digitalticket_schema = z.object({
-  status: z.enum(['UNSCANNED', 'SCANNED']).optional(),
+  status: z.enum(['UNSCANNED', 'SCANNED']).default("UNSCANNED"),
 });
 
 export type create_digitalticket_DTO = z.infer<typeof create_digitalticket_schema>;
