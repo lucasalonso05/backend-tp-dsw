@@ -1,11 +1,29 @@
+import bcrypt from 'bcrypt';
 import logger from '../config/logger';
 import prisma from '../config/prisma';
 import { Prisma } from '../generated/prisma';
 import { create_user_DTO, update_user_DTO } from '../schemas/user.schema';
 
+const SALT_ROUNDS = 10;
+
+// Campos que se exponen hacia afuera: nunca incluye password
+const user_select = {
+  id: true,
+  role: true,
+  doc_type: true,
+  doc_number: true,
+  name: true,
+  surname: true,
+  email: true,
+  telephone: true,
+  cuit: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.userSelect;
+
 export const getAll = async () => {
   try {
-    const users = await prisma.user.findMany();
+    const users = await prisma.user.findMany({ select: user_select });
     return users;
   } catch (error) {
     logger.error((error as Error).message);
@@ -15,7 +33,10 @@ export const getAll = async () => {
 
 export const getById = async (id: number) => {
   try {
-    const user_found = await prisma.user.findUnique({ where: { id } });
+    const user_found = await prisma.user.findUnique({
+      where: { id },
+      select: user_select,
+    });
     return user_found;
   } catch (error) {
     logger.error((error as Error).message);
@@ -25,7 +46,11 @@ export const getById = async (id: number) => {
 
 export const create = async (data: create_user_DTO) => {
   try {
-    const user_created = await prisma.user.create({ data });
+    const password = await bcrypt.hash(data.password, SALT_ROUNDS);
+    const user_created = await prisma.user.create({
+      data: { ...data, password },
+      select: user_select,
+    });
     return user_created;
   } catch (error) {
     logger.error((error as Error).message);
@@ -40,7 +65,10 @@ export const update = async (id: number, data: update_user_DTO) => {
   try {
     const user_updated = await prisma.user.update({
       where: { id },
-      data,
+      data: data.password
+        ? { ...data, password: await bcrypt.hash(data.password, SALT_ROUNDS) }
+        : data,
+      select: user_select,
     });
     return user_updated;
   } catch (error) {
@@ -54,7 +82,10 @@ export const update = async (id: number, data: update_user_DTO) => {
 
 export const delete_ = async (id: number) => {
   try {
-    const user_deleted = await prisma.user.delete({ where: { id } });
+    const user_deleted = await prisma.user.delete({
+      where: { id },
+      select: user_select,
+    });
     return user_deleted;
   } catch (error) {
     logger.error((error as Error).message);
