@@ -38,17 +38,17 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ mensaje: '¡Servidor de Eventify funcionando! 🎉' });
 });
 
-app.use('/places', placeRouter);
+app.use('/api/places', placeRouter);
 
-app.use('/users', userRouter);
+app.use('/api/users', userRouter);
 
-app.use('/events', eventRouter);
+app.use('/api/events', eventRouter);
 
-app.use('/orders', orderRouter);
+app.use('/api/orders', orderRouter);
 
-app.use('/entries', entryRouter);
+app.use('/api/entries', entryRouter);
 
-app.use('/digital-tickets', digitalticketRouter);
+app.use('/api/digital-tickets', digitalticketRouter);
 
 // ── Middleware de errores globales ──────────────────────
 // Va siempre AL FINAL — captura cualquier error no manejado
