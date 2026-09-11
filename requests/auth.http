@@ -1,0 +1,28 @@
+@baseUrl = http://localhost:3000/api
+@token = PEGAR_EL_TOKEN_DEL_LOGIN
+
+### Login correcto -> 200 { token, user }
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@eventify.com", "password": "CambiameYa2026" }
+
+### Contrasena incorrecta -> 401 "Email o contrasena incorrectos"
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@eventify.com", "password": "mala" }
+
+### Email inexistente -> 401 CON EL MISMO MENSAJE
+# Distinguirlos permitiria averiguar que emails estan registrados
+# (user enumeration). Comparar esta respuesta con la de arriba: son identicas.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "no-existe@test.com", "password": "12345678" }
+
+### Body invalido -> 400 con los issues de Zod
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "no-es-un-email" }

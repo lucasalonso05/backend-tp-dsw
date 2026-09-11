@@ -1,0 +1,39 @@
+@baseUrl = http://localhost:3000/api
+@token = PEGAR_EL_TOKEN_DEL_LOGIN
+
+### Listado -> publico (es el catalogo)
+GET {{baseUrl}}/places
+
+### Detalle -> publico
+GET {{baseUrl}}/places/1
+
+### Crear -> ORGANISER o ADMIN
+# NO lleva id_user: el dueno sale del token.
+POST {{baseUrl}}/places
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Teatro Real", "capacity": 500,
+  "description": "Sala principal",
+  "province": "Santa Fe", "city": "Rosario",
+  "street": "San Martin", "street_number": "123", "zip_code": "2000"
+}
+
+### Editar -> solo el dueno (403 si es de otro)
+PUT {{baseUrl}}/places/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Teatro Real - Sala A" }
+
+### Bajar el aforo por debajo de un evento programado -> 400
+PUT {{baseUrl}}/places/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "capacity": 1 }
+
+### Eliminar -> solo el dueno
+DELETE {{baseUrl}}/places/1
+Authorization: Bearer {{token}}

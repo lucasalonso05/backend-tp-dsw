@@ -1,54 +1,32 @@
 import { Request, Response } from 'express';
 import * as orderService from '../services/order.service';
-import {create_order_schema, update_order_schema,} from '../schemas/order.schema';
-
+import { create_order_schema, update_order_schema } from '../schemas/order.schema';
+import { actor_de } from '../lib/actor';
+import { InputError, NotFoundError } from '../lib/errors';
 
 export const getAll = async (req: Request, res: Response) => {
-  try {
-    const orders = await orderService.getAll();
-    res.status(200).json(orders);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener ordenes' });
-  }
+  // El service filtra por dueno salvo que sea ADMIN.
+  const orders = await orderService.getAll(actor_de(req));
+  res.status(200).json(orders);
 };
 
 export const getById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const order = await orderService.getById(Number(id));
-    if (!order) {
-      return res.status(404).json({ error: 'Orden no encontrada' });
-    }
-    res.status(200).json(order);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener orden' });
-  }
+  const order = await orderService.getById(Number(req.params.id), actor_de(req));
+  if (!order) throw new NotFoundError('Orden no encontrada');
+  res.status(200).json(order);
 };
 
 export const create = async (req: Request, res: Response) => {
-  try {
-    const validation = create_order_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues});
-    }
-
-    const order = await orderService.create(validation.data);
-    res.status(201).json(order);
-  } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
-  }
+  const validation = create_order_schema.safeParse(req.body);
+  if (!validation.success) throw new InputError(validation.error.issues);
+  // El id_user ya no viaja en el body: sale del token.
+  const order = await orderService.create(validation.data, actor_de(req));
+  res.status(201).json(order);
 };
 
 export const update = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const validation = update_order_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
-    const order = await orderService.update(Number(id), validation.data);
-    res.status(200).json(order);
-  } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
-  }
+  const validation = update_order_schema.safeParse(req.body);
+  if (!validation.success) throw new InputError(validation.error.issues);
+  const order = await orderService.update(Number(req.params.id), validation.data, actor_de(req));
+  res.status(200).json(order);
 };

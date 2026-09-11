@@ -1,0 +1,50 @@
+@baseUrl = http://localhost:3000/api
+@token = PEGAR_EL_TOKEN_DEL_LOGIN
+
+### Registro publico -> 201, siempre ASSISTANT
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "doc_type": "DNI", "doc_number": "40111222",
+  "name": "Ana", "surname": "Perez",
+  "email": "ana@test.com", "password": "12345678",
+  "telephone": "3411112222"
+}
+
+### B1 - Intento de escalada de privilegios
+# Se manda role: ADMIN. Tiene que volver "role": "ASSISTANT".
+# El campo ni existe en el DTO de entrada: Zod lo descarta.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "role": "ADMIN",
+  "doc_type": "DNI", "doc_number": "40999888",
+  "name": "Escalada", "surname": "Test",
+  "email": "escalada2@test.com", "password": "12345678",
+  "telephone": "3419998888"
+}
+
+### Listado completo -> solo ADMIN (401 sin token, 403 con token comun)
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+### Perfil propio -> propio o ADMIN
+GET {{baseUrl}}/users/1
+Authorization: Bearer {{token}}
+
+### Cargar CUIT (requisito para ser organizador)
+PUT {{baseUrl}}/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "cuit": "20401112223" }
+
+### Promover a ORGANISER -> solo ADMIN
+# Sin CUIT cargado devuelve 400 con el motivo.
+PATCH {{baseUrl}}/users/1/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "role": "ORGANISER" }

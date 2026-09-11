@@ -46,7 +46,6 @@ model user {
   cuit       String?
 
   events  event[]
-  assists assist[]
   places  place[]
   tickets digital_ticket[]
   orders  order[]
@@ -98,7 +97,6 @@ model event {
   date_time_cancellation DateTime?
 
   entries entry[]
-  assists assist[]
 
   id_user  Int
   id_place Int
@@ -117,6 +115,13 @@ model entry {
   entry_name        String
   entry_description String?
   unit_price        Decimal  @db.Decimal(10, 2)
+
+  // HORARIO DE ACCESO de este tipo de entrada, dentro del evento.
+  // Ej: "VIP: acceso 20:00-02:00", "General: 22:00-02:00".
+  // NO es una ventana de venta: la compra anticipada esta permitida y no se
+  // valida contra estas fechas. Invariante que sostienen entry.* y event.*:
+  //   event.date_time_start <= entry.date_time_start
+  //   entry.date_time_end   <= event.date_time_end
   date_time_start   DateTime
   date_time_end     DateTime
   stock             Int
@@ -194,20 +199,4 @@ model digital_ticket {
 
   @@index([id_order_item])
   @@map("digital_tickets")
-}
-
-model assist {
-  id_user  Int
-  id_event Int
-
-  date_time_assist DateTime?
-
-  FK_user  user  @relation(fields: [id_user], references: [id])
-  FK_event event @relation(fields: [id_event], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@id([id_user, id_event])
-  @@map("assists")
 }

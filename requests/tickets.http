@@ -1,0 +1,42 @@
+@baseUrl = http://localhost:3000/api
+@token = PEGAR_EL_TOKEN_DEL_LOGIN
+
+### Listado -> autenticado; SOLO los propios (ADMIN ve todos)
+GET {{baseUrl}}/digital-tickets
+Authorization: Bearer {{token}}
+
+### Detalle -> propio o ADMIN (404 si es ajeno)
+GET {{baseUrl}}/digital-tickets/1
+Authorization: Bearer {{token}}
+
+### C2 - Emision manual
+# Normalmente NO hace falta: los tickets se emiten solos al pasar la orden a
+# PAID. Este endpoint queda para completar los que falten (es idempotente).
+# Con la orden en PENDING devuelve 400: no se entrega la entrada antes de cobrar.
+POST {{baseUrl}}/digital-tickets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "id_order_item": 1, "id_user": 1 }
+
+### B2 - Escanear un ticket (CUU 3)
+# Solo el ORGANIZADOR del evento, o un ADMIN. El dueno del ticket NO puede:
+# se autovalidaria la entrada.
+POST {{baseUrl}}/digital-tickets/scan
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "qr_code": "PEGAR_EL_QR_DEL_TICKET" }
+
+### B2 - Escanearlo de nuevo -> 400 "El ticket ya fue escaneado"
+# El status viejo va en el WHERE del UPDATE, asi que dos escaneos simultaneos
+# tampoco pueden canjearlo dos veces.
+POST {{baseUrl}}/digital-tickets/scan
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "qr_code": "PEGAR_EL_QR_DEL_TICKET" }
+
+# NO existen PUT ni DELETE a proposito: el unico cambio de estado valido es el
+# canje (/scan), y borrar un ticket destruiria la evidencia de que alguien
+# entro al evento.

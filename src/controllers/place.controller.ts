@@ -1,65 +1,38 @@
 import { Request, Response } from 'express';
 import * as placeService from '../services/place.service';
-import {create_place_schema, update_place_schema,} from '../schemas/place.schema';
+import { create_place_schema, update_place_schema } from '../schemas/place.schema';
+import { actor_de } from '../lib/actor';
+import { InputError, NotFoundError } from '../lib/errors';
 
+// Sin try/catch: wrap() en las rutas manda cualquier excepcion al manejador
+// global de index.ts, que es el unico lugar que decide codigos HTTP.
 
 export const getAll = async (req: Request, res: Response) => {
-  try {
-    const places = await placeService.getAll();
-    res.status(200).json(places);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener lugares' });
-  }
+  const places = await placeService.getAll();
+  res.status(200).json(places);
 };
 
 export const getById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const place = await placeService.getById(Number(id));
-    if (!place) {
-      return res.status(404).json({ error: 'Lugar no encontrado' });
-    }
-    res.status(200).json(place);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener el lugar' });
-  }
+  const place = await placeService.getById(Number(req.params.id));
+  if (!place) throw new NotFoundError('Lugar no encontrado');
+  res.status(200).json(place);
 };
 
 export const create = async (req: Request, res: Response) => {
-  try {
-    // Primero validar con Zod
-    const validation = create_place_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues});
-    }
-   
-    const place = await placeService.create(validation.data);
-    res.status(201).json(place);
-  } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
-  }
+  const validation = create_place_schema.safeParse(req.body);
+  if (!validation.success) throw new InputError(validation.error.issues);
+  const place = await placeService.create(validation.data, actor_de(req));
+  res.status(201).json(place);
 };
 
 export const update = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const validation = update_place_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
-    const place = await placeService.update(Number(id), validation.data);
-    res.status(200).json(place);
-  } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
-  }
+  const validation = update_place_schema.safeParse(req.body);
+  if (!validation.success) throw new InputError(validation.error.issues);
+  const place = await placeService.update(Number(req.params.id), validation.data, actor_de(req));
+  res.status(200).json(place);
 };
 
 export const delete_ = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    await placeService.delete_(Number(id));
-    res.status(200).json({ mensaje: 'Lugar eliminado correctamente' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar el lugar' });
-  }
+  await placeService.delete_(Number(req.params.id), actor_de(req));
+  res.status(200).json({ mensaje: 'Lugar eliminado correctamente' });
 };

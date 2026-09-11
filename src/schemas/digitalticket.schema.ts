@@ -13,3 +13,11 @@ export const update_digitalticket_schema = z.object({
 
 export type create_digitalticket_DTO = z.infer<typeof create_digitalticket_schema>;
 export type update_digitalticket_DTO = z.infer<typeof update_digitalticket_schema>;
+
+// El QR se valida como cualquier otra entrada, en vez de chequearlo a mano en
+// el controller con un if.
+export const scan_schema = z.object({
+  qr_code: z.string().min(1),
+});
+
+export type scan_DTO = z.infer<typeof scan_schema>;

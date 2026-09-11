@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:3000/api
+@token = PEGAR_EL_TOKEN_DEL_LOGIN
+
+### Listado -> autenticado; devuelve SOLO las propias (ADMIN ve todas)
+GET {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+
+### Detalle -> propia o ADMIN. Una orden ajena responde 404, no 403.
+GET {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+
+### B5 - Comprar. NO lleva id_user: el dueno sale del token.
+# Crear la orden RESERVA el stock inmediatamente y queda PENDING.
+POST {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "items": [ { "id_entry": 1, "quantity": 2 } ] }
+
+### B5 - Intento de comprar a nombre de otro
+# Se manda id_user: se ignora. La orden queda a nombre del dueno del token.
+POST {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "id_user": 999, "items": [ { "id_entry": 1, "quantity": 1 } ] }
+
+### B4 - Items duplicados: se consolidan sumando cantidades (2+3 = un item de 5)
+POST {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "items": [ { "id_entry": 1, "quantity": 2 }, { "id_entry": 1, "quantity": 3 } ] }
+
+### B3 - Confirmar el pago -> solo ADMIN
+# C2: al pasar a PAID se emiten AUTOMATICAMENTE los tickets, uno por unidad.
+# Mirar el array `tickets` dentro de cada item de la respuesta.
+PUT {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "PAID", "payment_reference": "MP-12345" }
+
+### B5 - Un usuario comun marcando su propia orden como PAID -> 403
+# Podria regalarse las entradas. Solo puede CANCELAR.
+PUT {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "PAID" }
+
+### Cancelar (devuelve el stock al pool)
+PUT {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "CANCELLED" }
+
+### B3 - Resucitar una orden cancelada -> 400
+# CANCELLED es terminal: volver a PAID dejaria la orden pagada sin stock.
+PUT {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "PAID" }
+
+# NO existe DELETE /orders/:id a proposito: una orden se cancela, no se borra.
+# Borrarla perderia el historial y dejaria tickets huerfanos.
