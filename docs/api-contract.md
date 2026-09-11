@@ -245,6 +245,44 @@ es el caso de uso principal del sistema; lo que se protege es escribir.
 
 `DELETE /api/entries/:id` falla con **400** si la entrada ya tiene ventas.
 
+### `GET /api/events` — listado con filtros, orden y paginación
+
+Todos los parámetros son opcionales y van en el query string.
+
+| Param | Qué filtra |
+|---|---|
+| `q` | texto en el título (insensible a mayúsculas) |
+| `category` | categoría exacta |
+| `city` · `province` | ubicación — viven en el **lugar**, se filtra atravesando la relación |
+| `status` | `CONFIRMED` · `FINISHED` · `CANCELLED` |
+| `desde` · `hasta` | ISO. El evento entra si **empieza** dentro del rango |
+| `precio_min` · `precio_max` | el evento entra si tiene **al menos una** entrada en ese rango |
+| `orden` | `fecha` (default) · `fecha_desc` · `popularidad` (más vendidos) |
+| `page` | default 1 |
+| `limit` | default 20, **máximo 100** (un `?limit=999999` devuelve 400) |
+
+**200 OK**
+
+```json
+{
+  "data": [ { "...evento...", "FK_place": {...}, "FK_user": {...}, "entries": [ { "...", "disponibles": 298 } ] } ],
+  "page": 1, "limit": 20, "total": 41, "totalPages": 3
+}
+```
+
+> ⚠️ **Cambio de forma.** Antes devolvía un array pelado; ahora devuelve este
+> objeto. En el frontend hay que entrar por `.data` (ver `Paginated<T>` en
+> `src/types/api.ts`).
+
+Cada evento trae **el lugar**, **el organizador** (solo `id`, `name`, `surname`,
+`email` — nunca el password ni el documento) y **sus entradas con `disponibles`
+ya calculado** (`stock - sold_stock`).
+
+### `GET /api/events/:id` — detalle
+
+Misma forma que un elemento de `data`: evento + lugar + organizador + entradas
+con precio y disponibilidad. Es lo que pide el TP en *"Detalle al seleccionar"*.
+
 ### Horario de las entradas
 
 `entry.date_time_start` / `date_time_end` son el **horario de acceso** de ese
@@ -277,6 +315,35 @@ entry.date_time_end   <= event.date_time_end
 > `ticket → order_item → entry → event → id_user`.
 
 Escanear un ticket ya escaneado devuelve **400**.
+
+
+### Emisión automática de tickets
+
+Al pasar una orden a **`PAID`**, el backend emite **un ticket por unidad** de
+cada ítem, en la **misma transacción** que el cambio de estado: no puede existir
+una orden pagada sin sus tickets.
+
+La respuesta de `PUT /api/orders/:id` ya los trae dentro de cada ítem:
+
+```json
+{ "items": [ { "quantity": 2, "tickets": [ { "qr_code": "uuid...", "status": "UNSCANNED" }, { ... } ] } ] }
+```
+
+Es idempotente: si algunos ya se habían emitido a mano, solo completa los que
+faltan. `POST /api/digital-tickets` sigue existiendo para ese caso.
+
+---
+
+## Endpoints que NO existen (y por qué)
+
+Decisiones tomadas, no olvidos:
+
+| Endpoint ausente | Motivo |
+|---|---|
+| `DELETE /api/orders/:id` | Una orden **se cancela, no se borra** (`PUT { status: 'CANCELLED' }`). Borrarla perdería el historial de compra y dejaría tickets huérfanos. |
+| `PUT /api/digital-tickets/:id` | El único cambio de estado válido de un ticket es el **canje**, y tiene su propio endpoint (`/scan`). |
+| `DELETE /api/digital-tickets/:id` | Borrar un ticket destruiría la evidencia de que alguien entró al evento. |
+| `DELETE /api/events/:id` **real** | Existe la ruta, pero hace **cancelación lógica**: marca `CANCELLED` y sella la fecha. Hay órdenes y tickets colgando del evento. |
 
 ---
 

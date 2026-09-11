@@ -40,5 +40,43 @@ export const update_event_schema = event_base.partial().refine(rango_coherente, 
   path: ['date_time_end'],
 });
 
+// ── FILTROS DEL LISTADO ───────────────────────────────────────────────────
+//
+// Los query params llegan SIEMPRE como string ("?page=2" es "2", no 2). Por eso
+// z.coerce.*: convierte antes de validar. Sin el coerce, `page` nunca pasaria
+// un z.number() y el filtro fallaria en silencio.
+//
+// Cubre el requisito obligatorio del TP (categoria, ubicacion, rango de fechas
+// y estado) y parte del Alcance Adicional (busqueda por texto, rango de precio
+// y ordenamiento por popularidad).
+export const event_query_schema = z.object({
+  /** Busca en el titulo, sin distinguir mayusculas. */
+  q: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+
+  /** Ubicacion: viven en el lugar, no en el evento. */
+  city: z.string().min(1).optional(),
+  province: z.string().min(1).optional(),
+
+  status: z.enum(['CONFIRMED', 'FINISHED', 'CANCELLED']).optional(),
+
+  /** Rango de fechas del evento. */
+  desde: z.iso.datetime().optional(),
+  hasta: z.iso.datetime().optional(),
+
+  /** Rango de precio: mira el unit_price de las entradas del evento. */
+  precio_min: z.coerce.number().nonnegative().optional(),
+  precio_max: z.coerce.number().positive().optional(),
+
+  orden: z.enum(['fecha', 'fecha_desc', 'popularidad']).default('fecha'),
+
+  // ── PAGINACION ──────────────────────────────────────────────────────────
+  // El limite tiene tope: sin un max, un `?limit=999999` obliga a la base a
+  // materializar todo y es una forma barata de tumbar el servidor.
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
 export type create_event_DTO = z.infer<typeof create_event_schema>;
 export type update_event_DTO = z.infer<typeof update_event_schema>;
+export type event_query_DTO = z.infer<typeof event_query_schema>;

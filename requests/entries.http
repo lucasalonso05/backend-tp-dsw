@@ -1,0 +1,57 @@
+@baseUrl = http://localhost:3000/api
+@token = PEGAR_EL_TOKEN_DEL_LOGIN
+
+### Listado y detalle -> publicos
+GET {{baseUrl}}/entries
+
+###
+GET {{baseUrl}}/entries/1
+
+### Crear -> solo el dueno DEL EVENTO (la entrada hereda el dueno)
+POST {{baseUrl}}/entries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entry_name": "General", "entry_description": "Campo",
+  "unit_price": 5000.50, "stock": 300,
+  "date_time_start": "2027-09-01T22:00:00.000Z",
+  "date_time_end": "2027-09-02T02:00:00.000Z",
+  "id_event": 1
+}
+
+### La suma de stocks supera el total del evento -> 400
+POST {{baseUrl}}/entries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entry_name": "Imposible", "unit_price": 100, "stock": 999999,
+  "date_time_start": "2027-09-01T22:00:00.000Z",
+  "date_time_end": "2027-09-02T02:00:00.000Z",
+  "id_event": 1
+}
+
+### B6 - La entrada empieza antes que el evento -> 400
+# Las fechas de una entrada son su HORARIO DE ACCESO dentro del evento.
+POST {{baseUrl}}/entries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entry_name": "Temprana", "unit_price": 100, "stock": 1,
+  "date_time_start": "2027-09-01T18:00:00.000Z",
+  "date_time_end": "2027-09-02T02:00:00.000Z",
+  "id_event": 1
+}
+
+### Bajar el stock por debajo de lo ya vendido -> 400
+PUT {{baseUrl}}/entries/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "stock": 1 }
+
+### Eliminar una entrada con ventas -> 400
+DELETE {{baseUrl}}/entries/1
+Authorization: Bearer {{token}}

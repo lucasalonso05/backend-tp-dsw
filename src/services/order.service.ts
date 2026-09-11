@@ -4,6 +4,7 @@ import { Prisma, order_status } from '../generated/prisma'
 import { create_order_DTO, update_order_DTO } from '../schemas/order.schema';
 import { ValidationError, ForbiddenError, NotFoundError, ConflictError } from '../lib/errors';
 import logger from '../config/logger'
+import { v4 as uuidv4 } from 'uuid'
 
 import { actor, es_admin } from '../lib/actor';
 
@@ -45,13 +46,48 @@ const ESTADO_EN_TEXTO: Record<string, string> = {
   FINISHED: 'finalizado',
 };
 
+// ── C2: EMISION AUTOMATICA DE TICKETS ────────────────────────────────────
+//
+// El CUU 1 del enunciado dice que el comprador "recibe el/los ticket(s)
+// digitales con codigo QR unico por entrada adquirida". Hasta ahora habia que
+// hacer un POST /digital-tickets manual por cada unidad.
+//
+// El lugar correcto es la transicion PENDING -> PAID: antes de pagar no
+// corresponde emitir nada, y despues de pagar el comprador tiene que tener sus
+// entradas sin hacer un paso extra.
+//
+// Va DENTRO de la misma transaccion que el cambio de estado: si la emision
+// falla, la orden no queda PAID. No puede existir una orden pagada sin tickets.
+const emitir_tickets = async (tx: Prisma.TransactionClient, id_order: number, id_user: number) => {
+  const items = await tx.order_item.findMany({ where: { id_order } });
+
+  const nuevos: { id_order_item: number; id_user: number; qr_code: string }[] = [];
+
+  for (const item of items) {
+    // Idempotente: si algunos tickets ya se emitieron a mano, solo se completan
+    // los que faltan. Reintentar no duplica.
+    const ya_emitidos = await tx.digital_ticket.count({ where: { id_order_item: item.id } });
+
+    for (let i = 0; i < item.quantity - ya_emitidos; i++) {
+      // UUID v4 y no el id: un QR predecible se puede falsificar mirando otro.
+      nuevos.push({ id_order_item: item.id, id_user, qr_code: uuidv4() });
+    }
+  }
+
+  if (nuevos.length > 0) {
+    await tx.digital_ticket.createMany({ data: nuevos });
+  }
+
+  return nuevos.length;
+};
+
 export const getAll = async (quien: actor) => {
   try {
     // Un ADMIN ve todas las ordenes; cualquier otro, solo las suyas. El filtro
     // se arma con el id del token, asi que no hay forma de pedir las ajenas.
     const orders = await prisma.order.findMany({
       where: es_admin(quien) ? {} : { id_user: quien.id },
-      include: { items: true },
+      include: { items: { include: { tickets: true } } },
     });
     return orders;
   } catch (error) {
@@ -63,7 +99,7 @@ export const getAll = async (quien: actor) => {
 export const getById = async (id: number, quien: actor) => {
   const order_found = await prisma.order.findUnique({
     where: { id },
-    include: { items: true },
+    include: { items: { include: { tickets: true } } },
   });
 
   if (!order_found) return null;
@@ -186,7 +222,7 @@ export const create = async (data: create_order_DTO, quien: actor) => {
           total,
           items: { create: items_data },
         },
-        include: { items: true },
+        include: { items: { include: { tickets: true } } },
       });
     }, {
       // Este es el camino CALIENTE: en una salida a la venta entran cientos de
@@ -219,7 +255,7 @@ export const create = async (data: create_order_DTO, quien: actor) => {
 
 export const update = async (id: number, data: update_order_DTO, quien: actor) => {
   try {
-    const existing = await prisma.order.findUnique({ where: { id }, include: { items: true } });
+    const existing = await prisma.order.findUnique({ where: { id }, include: { items: { include: { tickets: true } } } });
     if (!existing) throw new NotFoundError('La orden no existe');
 
     // Misma regla que en getById: para quien no es dueño, la orden no existe.
@@ -245,7 +281,7 @@ export const update = async (id: number, data: update_order_DTO, quien: actor) =
       const order_updated = await prisma.order.update({
         where: { id },
         data: { payment_reference: data.payment_reference },
-        include: { items: true },
+        include: { items: { include: { tickets: true } } },
       });
       return order_updated;
     }
@@ -289,9 +325,18 @@ export const update = async (id: number, data: update_order_DTO, quien: actor) =
           });
         }
       }
+
+      // Se paga -> se emiten los tickets. Misma transaccion: o quedan las dos
+      // cosas, o no queda ninguna.
+      if (nuevo_estado === 'PAID') {
+        const emitidos = await emitir_tickets(tx, id, existing.id_user);
+        if (emitidos > 0) {
+          logger.info(`Orden ${id} pagada: ${emitidos} ticket(s) emitidos`);
+        }
+      }
     });
 
-    return await prisma.order.findUnique({ where: { id }, include: { items: true } });
+    return await prisma.order.findUnique({ where: { id }, include: { items: { include: { tickets: true } } } });
   } catch (error) {
     logger.error((error as Error).message);
     throw error;
@@ -313,7 +358,7 @@ export const expire_pending = async () => {
 
   const vencidas = await prisma.order.findMany({
     where: { status: 'PENDING', createdAt: { lt: limite } },
-    include: { items: true },
+    include: { items: { include: { tickets: true } } },
   });
 
   let expiradas = 0;

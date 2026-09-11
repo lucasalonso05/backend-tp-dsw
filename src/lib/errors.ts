@@ -44,3 +44,18 @@ export class NotFoundError extends AppError {
 export class ConflictError extends AppError {
   constructor(message: string) { super(message, 409); }
 }
+
+/**
+ * 400 con el detalle de Zod. Existe para que la validacion de entrada tambien
+ * salga por el manejador global: asi TODAS las respuestas de error se arman en
+ * un unico lugar, y el controller nunca llama a res.status() en un camino de
+ * error.
+ *
+ * Transporta el array de `issues` tal cual, porque el interceptor del frontend
+ * ya sabe concatenar sus `message` (ver ApiError en src/types/api.ts).
+ */
+export class InputError extends AppError {
+  constructor(public readonly issues: unknown) {
+    super('Datos invalidos', 400);
+  }
+}
