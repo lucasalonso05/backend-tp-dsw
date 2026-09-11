@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as userService from '../services/user.service';
-import { create_user_schema, update_user_schema } from '../schemas/user.schema';
+import { register_user_schema, update_user_schema } from '../schemas/user.schema';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
@@ -26,7 +26,7 @@ export const getById = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   try {
-    const validation = create_user_schema.safeParse(req.body);
+    const validation = register_user_schema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.issues });
     }

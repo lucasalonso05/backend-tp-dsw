@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import logger from '../config/logger';
 import prisma from '../config/prisma';
 import { Prisma } from '../generated/prisma';
-import { create_user_DTO, update_user_DTO } from '../schemas/user.schema';
+import { register_user_DTO, update_user_DTO } from '../schemas/user.schema';
 
 const SALT_ROUNDS = 10;
 
@@ -44,11 +44,11 @@ export const getById = async (id: number) => {
   }
 };
 
-export const create = async (data: create_user_DTO) => {
+export const create = async (data: register_user_DTO) => {
   try {
     const password = await bcrypt.hash(data.password, SALT_ROUNDS);
     const user_created = await prisma.user.create({
-      data: { ...data, password },
+      data: { ...data, password, role: 'ASSISTANT' },
       select: user_select,
     });
     return user_created;
