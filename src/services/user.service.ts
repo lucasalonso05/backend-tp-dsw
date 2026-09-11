@@ -1,10 +1,8 @@
-import bcrypt from 'bcrypt';
 import logger from '../config/logger';
+import { hashear_password } from '../lib/password';
 import prisma from '../config/prisma';
-import { Prisma } from '../generated/prisma';
+import { Prisma, role_user } from '../generated/prisma';
 import { register_user_DTO, update_user_DTO } from '../schemas/user.schema';
-
-const SALT_ROUNDS = 10;
 
 // Campos que se exponen hacia afuera: nunca incluye password
 const user_select = {
@@ -46,7 +44,7 @@ export const getById = async (id: number) => {
 
 export const create = async (data: register_user_DTO) => {
   try {
-    const password = await bcrypt.hash(data.password, SALT_ROUNDS);
+    const password = await hashear_password(data.password);
     const user_created = await prisma.user.create({
       data: { ...data, password, role: 'ASSISTANT' },
       select: user_select,
@@ -66,7 +64,7 @@ export const update = async (id: number, data: update_user_DTO) => {
     const user_updated = await prisma.user.update({
       where: { id },
       data: data.password
-        ? { ...data, password: await bcrypt.hash(data.password, SALT_ROUNDS) }
+        ? { ...data, password: await hashear_password(data.password) }
         : data,
       select: user_select,
     });
@@ -90,5 +88,30 @@ export const delete_ = async (id: number) => {
   } catch (error) {
     logger.error((error as Error).message);
     throw new Error('No se pudo borrar el usuario');
+  }
+};
+
+// Unico camino por el que alguien cambia de rol. Solo lo alcanza un ADMIN:
+// la ruta lo protege con authenticate + requireRole('ADMIN').
+export const update_role = async (id: number, role: role_user) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw new Error('El usuario no existe');
+
+    // Un organizador emite entradas y factura: sin CUIT no puede operar.
+    // La regla vive aca porque este es el unico lugar donde nace un ORGANISER.
+    if (role === 'ORGANISER' && !user.cuit) {
+      throw new Error('Para ser organizador el usuario debe tener un CUIT cargado');
+    }
+
+    const user_updated = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: user_select,
+    });
+    return user_updated;
+  } catch (error) {
+    logger.error((error as Error).message);
+    throw error;
   }
 };

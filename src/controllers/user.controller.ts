@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as userService from '../services/user.service';
-import { register_user_schema, update_user_schema } from '../schemas/user.schema';
+import { register_user_schema, update_user_schema, update_role_schema } from '../schemas/user.schema';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
@@ -59,5 +59,19 @@ export const delete_ = async (req: Request, res: Response) => {
     res.status(200).json({ mensaje: 'Usuario eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar el usuario' });
+  }
+};
+
+export const update_role = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validation = update_role_schema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.issues });
+    }
+    const user = await userService.update_role(Number(id), validation.data.role);
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
   }
 };

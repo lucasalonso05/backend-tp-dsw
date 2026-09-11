@@ -5,8 +5,9 @@ export const order_item_input_schema = z.object({
   quantity: z.number().int().positive(),
 });
 
+// Sin id_user: quien compra sale del token, no del body. Que el cliente
+// pudiera elegirlo era el agujero de B5 (comprar a nombre de otro).
 export const create_order_schema = z.object({
-  id_user: z.number().int().positive(),
   items: z.array(order_item_input_schema).min(1),
 });
 

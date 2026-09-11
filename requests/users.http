@@ -1,0 +1,11 @@
+### Intento de escalada de privilegios — debe devolver role: ASSISTANT
+POST http://localhost:3000/api/users
+Content-Type: application/json
+
+{
+  "role": "ADMIN",
+  "doc_type": "DNI", "doc_number": "40123456",
+  "name": "Test", "surname": "Escalada",
+  "email": "escalada@test.com", "password": "12345678",
+  "telephone": "3411234567"
+}

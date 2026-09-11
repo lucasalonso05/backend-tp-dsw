@@ -117,6 +117,13 @@ model entry {
   entry_name        String
   entry_description String?
   unit_price        Decimal  @db.Decimal(10, 2)
+
+  // HORARIO DE ACCESO de este tipo de entrada, dentro del evento.
+  // Ej: "VIP: acceso 20:00-02:00", "General: 22:00-02:00".
+  // NO es una ventana de venta: la compra anticipada esta permitida y no se
+  // valida contra estas fechas. Invariante que sostienen entry.* y event.*:
+  //   event.date_time_start <= entry.date_time_start
+  //   entry.date_time_end   <= event.date_time_end
   date_time_start   DateTime
   date_time_end     DateTime
   stock             Int

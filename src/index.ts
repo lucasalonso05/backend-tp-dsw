@@ -10,6 +10,8 @@ import eventRouter from './routes/event.routes'
 import orderRouter from './routes/order.routes'
 import entryRouter from './routes/entry.routes'
 import digitalticketRouter from './routes/digitalticket.routes'
+import authRouter from './routes/auth.routes'
+import { iniciar_expiracion_de_ordenes } from './jobs/expire_orders.job'
 
 const app: Application = express();
 
@@ -38,6 +40,8 @@ app.get('/api', (req: Request, res: Response) => {
   res.json({ mensaje: '¡Servidor de Eventify funcionando! 🎉' });
 });
 
+app.use('/api/auth', authRouter);
+
 app.use('/api/places', placeRouter);
 
 app.use('/api/users', userRouter);
@@ -50,6 +54,7 @@ app.use('/api/entries', entryRouter);
 
 app.use('/api/digital-tickets', digitalticketRouter);
 
+
 // ── Middleware de errores globales ──────────────────────
 // Va siempre AL FINAL — captura cualquier error no manejado
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -60,4 +65,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 // ── Iniciar servidor ────────────────────────────────────
 app.listen(config.port, () => {
   logger.info(`Servidor corriendo en http://localhost:${config.port}`);
+  // Devuelve al pool el stock de las ordenes que nadie pago.
+  iniciar_expiracion_de_ordenes();
 });
