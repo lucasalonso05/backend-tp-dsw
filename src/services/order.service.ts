@@ -1,10 +1,20 @@
-import prisma from '../config/prisma'
+import prisma from '../config/prisma';
+import logger from '../config/logger';
+import { Prisma } from '../generated/prisma';
+import { v4 as uuidv4 } from 'uuid';
 import { create_order_DTO, update_order_DTO } from '../schemas/order.schema';
-import logger from '../config/logger'
 
-export const getAll = async () => {
+// Cada orden viaja con sus líneas, y cada línea con sus tickets.
+const con_tickets = { items: { include: { tickets: true } } } satisfies Prisma.orderInclude;
+
+// Sin id_user devuelve todas (para un admin); con id_user, solo las de ese comprador.
+export const getAll = async (id_user?: number) => {
   try {
-    const orders = await prisma.order.findMany({ include: { items: true } });
+    const orders = await prisma.order.findMany({
+      where: { id_user },
+      include: con_tickets,
+      orderBy: { createdAt: 'desc' },
+    });
     return orders;
   } catch (error) {
     logger.error((error as Error).message);
@@ -14,10 +24,7 @@ export const getAll = async () => {
 
 export const getById = async (id: number) => {
   try {
-    const order_found = await prisma.order.findUnique({
-      where: { id },
-      include: { items: true },
-    });
+    const order_found = await prisma.order.findUnique({ where: { id }, include: con_tickets });
     return order_found;
   } catch (error) {
     logger.error((error as Error).message);
@@ -25,45 +32,44 @@ export const getById = async (id: number) => {
   }
 };
 
-export const create = async (data: create_order_DTO) => {
+// Crea la orden PENDING y reserva el stock de cada entrada.
+export const create = async (id_user: number, data: create_order_DTO) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: data.id_user }
-    });
-    if (!user) throw new Error('El usuario no existe');
+    // Si llega dos veces la misma entrada, se suman las cantidades.
+    const quantities = new Map<number, number>();
+    for (const item of data.items) {
+      quantities.set(item.id_entry, (quantities.get(item.id_entry) ?? 0) + item.quantity);
+    }
 
     const order_created = await prisma.$transaction(async (tx) => {
       let total = 0;
       const items_data: { id_entry: number; quantity: number; unit_price: number; subtotal: number }[] = [];
 
-      for (const item of data.items) {
-        const entry = await tx.entry.findUnique({ where: { id: item.id_entry } });
-        if (!entry) throw new Error(`La entrada ${item.id_entry} no existe`);
-
-        const available = entry.stock - entry.sold_stock;
-        if (available < item.quantity) {
+      for (const [id_entry, quantity] of quantities) {
+        const entry = await tx.entry.findUnique({ where: { id: id_entry }, include: { FK_event: true } });
+        if (!entry) throw new Error(`La entrada ${id_entry} no existe`);
+        if (entry.FK_event.status !== 'CONFIRMED') {
+          throw new Error(`El evento de "${entry.entry_name}" no está a la venta`);
+        }
+        if (entry.stock - entry.sold_stock < quantity) {
           throw new Error(`No hay stock suficiente para "${entry.entry_name}"`);
         }
 
         const unit_price = Number(entry.unit_price);
-        const subtotal = unit_price * item.quantity;
+        const subtotal = unit_price * quantity;
         total += subtotal;
 
         await tx.entry.update({
-          where: { id: entry.id },
-          data: { sold_stock: { increment: item.quantity } },
+          where: { id: id_entry },
+          data: { sold_stock: { increment: quantity } },
         });
 
-        items_data.push({ id_entry: entry.id, quantity: item.quantity, unit_price, subtotal });
+        items_data.push({ id_entry, quantity, unit_price, subtotal });
       }
 
       return tx.order.create({
-        data: {
-          id_user: data.id_user,
-          total,
-          items: { create: items_data },
-        },
-        include: { items: true },
+        data: { id_user, total, items: { create: items_data } },
+        include: con_tickets,
       });
     });
 
@@ -74,37 +80,62 @@ export const create = async (data: create_order_DTO) => {
   }
 };
 
-export const update = async (id: number, data: update_order_DTO) => {
+// Solo una orden PENDING cambia de estado. PAID, CANCELLED y EXPIRED son finales.
+export const changeStatus = async (id: number, data: update_order_DTO) => {
   try {
-    const existing = await prisma.order.findUnique({ where: { id }, include: { items: true } });
-    if (!existing) throw new Error('La orden no existe');
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: { items: { include: { FK_entry: { include: { FK_event: true } } } } },
+      });
+      if (!order) throw new Error('La orden no existe');
 
-    const is_already_closed = existing.status === 'CANCELLED' || existing.status === 'EXPIRED';
-    const releases_stock = data.status
-      && (data.status === 'CANCELLED' || data.status === 'EXPIRED')
-      && !is_already_closed;
+      if (data.status === 'PAID') {
+        const inactive = order.items.find((item) => item.FK_entry.FK_event.status !== 'CONFIRMED');
+        if (inactive) {
+          throw new Error(`El evento de "${inactive.FK_entry.entry_name}" ya no está a la venta`);
+        }
+      }
 
-    const order_updated = await prisma.$transaction(async (tx) => {
-      if (releases_stock) {
-        for (const item of existing.items) {
+      // El cambio solo se aplica si la orden sigue PENDING. Si dos pedidos llegan a la vez,
+      // el segundo encuentra la orden ya cambiada y no hace nada.
+      const claimed = await tx.order.updateMany({
+        where: { id, status: 'PENDING' },
+        data:
+          data.status === 'PAID'
+            ? {
+                status: 'PAID',
+                date_time_payment: new Date(),
+                // No hay pasarela de pago: si no viene una referencia, se genera una simulada.
+                payment_reference: data.payment_reference ?? `SIMULADO-${id}-${Date.now()}`,
+              }
+            : { status: data.status },
+      });
+      if (claimed.count === 0) throw new Error('La orden ya no está pendiente: no se puede cambiar');
+
+      if (data.status === 'PAID') {
+        // Un ticket por cada entrada comprada, cada uno con su código QR único.
+        await tx.digital_ticket.createMany({
+          data: order.items.flatMap((item) =>
+            Array.from({ length: item.quantity }, () => ({
+              qr_code: uuidv4(),
+              id_order_item: item.id,
+              id_user: order.id_user,
+            })),
+          ),
+        });
+      } else {
+        // Cancelar o vencer una orden pendiente devuelve las entradas reservadas.
+        for (const item of order.items) {
           await tx.entry.update({
             where: { id: item.id_entry },
             data: { sold_stock: { decrement: item.quantity } },
           });
         }
       }
-
-      return tx.order.update({
-        where: { id },
-        data: {
-          ...data,
-          date_time_payment: data.status === 'PAID' ? new Date() : undefined,
-        },
-        include: { items: true },
-      });
     });
 
-    return order_updated;
+    return await getById(id);
   } catch (error) {
     logger.error((error as Error).message);
     throw error;

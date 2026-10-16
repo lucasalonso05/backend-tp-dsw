@@ -18,9 +18,14 @@ const app: Application = express();
 // Seguridad HTTP
 app.use(helmet());
 
-// Permite peticiones desde el frontend
+// Orígenes que pueden llamar a la API, separados por coma en FRONTEND_URL.
+// Si no está definida, solo el frontend local.
+const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim());
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true,
 }));
 
