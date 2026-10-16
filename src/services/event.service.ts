@@ -1,11 +1,16 @@
 import logger from '../config/logger';
 import prisma from '../config/prisma'
+import { Prisma } from '../generated/prisma';
 import { create_event_DTO, update_event_DTO } from '../schemas/event.schema';
 
+// Cada evento viaja con los datos públicos de su organizador: nunca email, teléfono ni documento.
+const con_organizador = {
+  FK_user: { select: { id: true, name: true, surname: true } },
+} satisfies Prisma.eventInclude;
 
 export const getAll = async () => {
   try {
-    const events = await prisma.event.findMany();
+    const events = await prisma.event.findMany({ include: con_organizador });
     return events;
   } catch (error) {
     logger.error((error as Error).message);
@@ -15,7 +20,7 @@ export const getAll = async () => {
 
 export const getById = async (id: number) => {
   try {
-    const event_found = await prisma.event.findUnique({ where: { id } });
+    const event_found = await prisma.event.findUnique({ where: { id }, include: con_organizador });
     return event_found;
   } catch (error) {
     logger.error((error as Error).message);
@@ -23,7 +28,7 @@ export const getById = async (id: number) => {
   }
 };
 
-export const create = async (data: create_event_DTO) => {
+export const create = async (data: create_event_DTO & { id_user: number }) => {
 
   try{
     const organiser = await prisma.user.findUnique({
@@ -39,7 +44,7 @@ export const create = async (data: create_event_DTO) => {
 
     if (data.total_stock > place.capacity) throw new Error('El stock total no puede superar la capacidad del lugar');
 
-    const event_created = await prisma.event.create({ data });
+    const event_created = await prisma.event.create({ data, include: con_organizador });
     return event_created;
 
   } catch(error){
@@ -74,7 +79,8 @@ export const update = async (id: number, data: update_event_DTO) => {
       data: {
         ...data,
         date_time_cancellation: shouldCleanCancellation ? null : data.date_time_cancellation
-      }
+      },
+      include: con_organizador,
     });
 
     return event_updated;
@@ -89,7 +95,8 @@ export const delete_ = async (id: number) => {
   try{
     const event_cancelled = await prisma.event.update({
       where: { id },
-      data: { status: 'CANCELLED', date_time_cancellation: new Date() }
+      data: { status: 'CANCELLED', date_time_cancellation: new Date() },
+      include: con_organizador,
     });
     return event_cancelled;
 

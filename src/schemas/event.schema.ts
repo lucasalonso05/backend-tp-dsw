@@ -9,7 +9,8 @@ export const create_event_schema = z.object({
   date_time_end: z.iso.datetime(),
   date_time_cancellation: z.iso.datetime().nullable().optional(),
   status: z.enum(['CONFIRMED', 'FINISHED', 'CANCELLED']).default("CONFIRMED"),
-  id_user: z.number().int().positive(),
+  // Lo usa solo un admin para crear a nombre de un organizador; si no, el dueño sale del token.
+  id_user: z.number().int().positive().optional(),
   id_place: z.number().int().positive(),
 
   });

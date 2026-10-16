@@ -23,8 +23,7 @@ export const getById = async (id: number) => {
   }
 };
 
-export const create = async (data: create_place_DTO) => {
-  try {
+export const create = async (data: create_place_DTO & { id_user: number }) => {  try {
     const owner = await prisma.user.findUnique({ where: { id: data.id_user } });
     if (!owner) throw new Error('El usuario no existe');
     if (owner.role !== 'ORGANISER') throw new Error('El usuario no es un organizador');

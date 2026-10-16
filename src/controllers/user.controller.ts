@@ -31,7 +31,9 @@ export const create = async (req: Request, res: Response) => {
       return res.status(400).json({ error: validation.error.issues });
     }
 
-    const user = await userService.create(validation.data);
+        // Solo un admin puede elegir el rol: en el registro público siempre es ASSISTANT.
+    const role = req.user?.role === 'ADMIN' ? validation.data.role : 'ASSISTANT';
+    const user = await userService.create({ ...validation.data, role });
     res.status(201).json(user);
   } catch (error) {
     res.status(400).json({ error: (error as Error).message });
@@ -45,8 +47,11 @@ export const update = async (req: Request, res: Response) => {
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.issues });
     }
-    const user = await userService.update(Number(id), validation.data);
-    res.status(200).json(user);
+    // El rol solo lo cambia un admin: si lo manda otro, se ignora.
+    const { role, ...resto } = validation.data;
+    const data = req.user?.role === 'ADMIN' ? validation.data : resto;
+
+    const user = await userService.update(Number(id), data);    res.status(200).json(user);
   } catch (error) {
     res.status(400).json({ error: (error as Error).message });
   }
