@@ -14,7 +14,10 @@ export const create_user_schema = z.object({
   cuit: z.string().min(1).max(12).optional(),
 });
 
-export const update_user_schema = create_user_schema.partial();
+export const update_user_schema = create_user_schema
+  .extend({ role: user_role_schema.optional() })
+  .partial();
+
 
 export type create_user_DTO = z.infer<typeof create_user_schema>;
 export type update_user_DTO = z.infer<typeof update_user_schema>;

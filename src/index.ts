@@ -10,6 +10,7 @@ import eventRouter from './routes/event.routes'
 import orderRouter from './routes/order.routes'
 import entryRouter from './routes/entry.routes'
 import digitalticketRouter from './routes/digitalticket.routes'
+import authRouter from './routes/auth.routes'
 
 const app: Application = express();
 
@@ -49,6 +50,8 @@ app.use('/api/orders', orderRouter);
 app.use('/api/entries', entryRouter);
 
 app.use('/api/digital-tickets', digitalticketRouter);
+
+app.use('/api/auth', authRouter);
 
 // ── Middleware de errores globales ──────────────────────
 // Va siempre AL FINAL — captura cualquier error no manejado

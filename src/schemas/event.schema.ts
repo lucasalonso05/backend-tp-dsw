@@ -14,7 +14,10 @@ export const create_event_schema = z.object({
 
   });
 
-export const update_event_schema = create_event_schema.partial();
+// En la edición el estado no tiene valor por defecto: si el pedido no lo trae, no se toca.
+export const update_event_schema = create_event_schema
+  .extend({ status: z.enum(['CONFIRMED', 'FINISHED', 'CANCELLED']).optional() })
+  .partial();
 
 export type create_event_DTO = z.infer<typeof create_event_schema>;
 export type update_event_DTO = z.infer<typeof update_event_schema>;
