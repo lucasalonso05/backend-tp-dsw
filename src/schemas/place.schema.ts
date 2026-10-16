@@ -9,8 +9,8 @@ export const create_place_schema = z.object({
   street: z.string().min(1),
   street_number: z.string().min(1),
   zip_code: z.string().min(1),
-  id_user: z.number().int().positive(),
-});
+  // Lo usa solo un admin para crear a nombre de un organizador; si no, el dueño sale del token.
+  id_user: z.number().int().positive().optional(),});
 
 export const update_place_schema = create_place_schema.partial();
 

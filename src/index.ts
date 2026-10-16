@@ -10,6 +10,7 @@ import eventRouter from './routes/event.routes'
 import orderRouter from './routes/order.routes'
 import entryRouter from './routes/entry.routes'
 import digitalticketRouter from './routes/digitalticket.routes'
+import authRouter from './routes/auth.routes'
 
 const app: Application = express();
 
@@ -17,9 +18,14 @@ const app: Application = express();
 // Seguridad HTTP
 app.use(helmet());
 
-// Permite peticiones desde el frontend
+// Orígenes que pueden llamar a la API, separados por coma en FRONTEND_URL.
+// Si no está definida, solo el frontend local.
+const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim());
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true,
 }));
 
@@ -49,6 +55,8 @@ app.use('/api/orders', orderRouter);
 app.use('/api/entries', entryRouter);
 
 app.use('/api/digital-tickets', digitalticketRouter);
+
+app.use('/api/auth', authRouter);
 
 // ── Middleware de errores globales ──────────────────────
 // Va siempre AL FINAL — captura cualquier error no manejado

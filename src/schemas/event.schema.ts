@@ -9,12 +9,16 @@ export const create_event_schema = z.object({
   date_time_end: z.iso.datetime(),
   date_time_cancellation: z.iso.datetime().nullable().optional(),
   status: z.enum(['CONFIRMED', 'FINISHED', 'CANCELLED']).default("CONFIRMED"),
-  id_user: z.number().int().positive(),
+  // Lo usa solo un admin para crear a nombre de un organizador; si no, el dueño sale del token.
+  id_user: z.number().int().positive().optional(),
   id_place: z.number().int().positive(),
 
   });
 
-export const update_event_schema = create_event_schema.partial();
+// En la edición el estado no tiene valor por defecto: si el pedido no lo trae, no se toca.
+export const update_event_schema = create_event_schema
+  .extend({ status: z.enum(['CONFIRMED', 'FINISHED', 'CANCELLED']).optional() })
+  .partial();
 
 export type create_event_DTO = z.infer<typeof create_event_schema>;
 export type update_event_DTO = z.infer<typeof update_event_schema>;
