@@ -1,68 +1,103 @@
 import { Request, Response } from 'express';
+import logger from '../config/logger';
 import * as userService from '../services/user.service';
 import { create_user_schema, update_user_schema } from '../schemas/user.schema';
 
+// Lee el :id de la URL. Devuelve null si no es un entero positivo.
+const readId = (req: Request) => {
+  const id = Number(req.params.id);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+
+// Traduce los errores del negocio a códigos HTTP.
+// Lo que no es un error conocido va al log y sale como 500, sin detalles internos.
+const respondError = (res: Response, error: unknown, fallback: string) => {
+  if (error instanceof userService.UserNotFoundError) {
+    return res.status(404).json({ error: error.message });
+  }
+  if (
+    error instanceof userService.UserAlreadyExistsError ||
+    error instanceof userService.UserHasRelatedDataError
+  ) {
+    return res.status(409).json({ error: error.message });
+  }
+  logger.error((error as Error).message);
+  return res.status(500).json({ error: fallback });
+};
+
+// 200 · 500
 export const getAll = async (req: Request, res: Response) => {
   try {
     const users = await userService.getAll();
-    res.status(200).json(users);
+    return res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener usuarios' });
+    return respondError(res, error, 'Error al obtener usuarios');
   }
 };
 
+// 200 · 400 id inválido · 404 · 500
 export const getById = async (req: Request, res: Response) => {
+  const id = readId(req);
+  if (id === null) {
+    return res.status(400).json({ error: 'El id debe ser un número entero positivo' });
+  }
+
   try {
-    const { id } = req.params;
-    const user = await userService.getById(Number(id));
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
-    res.status(200).json(user);
+    const user = await userService.getById(id);
+    return res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener el usuario' });
+    return respondError(res, error, 'Error al obtener el usuario');
   }
 };
 
+// 201 · 400 datos inválidos · 409 ya existe · 500
 export const create = async (req: Request, res: Response) => {
-  try {
-    const validation = create_user_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
+  const validation = create_user_schema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.issues });
+  }
 
-        // Solo un admin puede elegir el rol: en el registro público siempre es ASSISTANT.
-    const role = req.user?.role === 'ADMIN' ? validation.data.role : 'ASSISTANT';
-    const user = await userService.create({ ...validation.data, role });
-    res.status(201).json(user);
+  try {
+    // req.user puede no estar: en el registro público nadie inició sesión.
+    const user = await userService.create(validation.data, req.user);
+    return res.status(201).json(user);
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    return respondError(res, error, 'Error al crear el usuario');
   }
 };
 
+// 200 · 400 id o datos inválidos · 404 · 409 ya existe · 500
 export const update = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const validation = update_user_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
-    // El rol solo lo cambia un admin: si lo manda otro, se ignora.
-    const { role, ...resto } = validation.data;
-    const data = req.user?.role === 'ADMIN' ? validation.data : resto;
+  const id = readId(req);
+  if (id === null) {
+    return res.status(400).json({ error: 'El id debe ser un número entero positivo' });
+  }
 
-    const user = await userService.update(Number(id), data);    res.status(200).json(user);
+  const validation = update_user_schema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.issues });
+  }
+
+  try {
+    // La ruta exige sesión (requireAuth), así que req.user siempre está.
+    const user = await userService.update(id, validation.data, req.user!);
+    return res.status(200).json(user);
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    return respondError(res, error, 'Error al actualizar el usuario');
   }
 };
 
+// 200 · 400 id inválido · 404 · 409 tiene datos asociados · 500
 export const delete_ = async (req: Request, res: Response) => {
+  const id = readId(req);
+  if (id === null) {
+    return res.status(400).json({ error: 'El id debe ser un número entero positivo' });
+  }
+
   try {
-    const { id } = req.params;
-    await userService.delete_(Number(id));
-    res.status(200).json({ mensaje: 'Usuario eliminado correctamente' });
+    await userService.delete_(id);
+    return res.status(200).json({ mensaje: 'Usuario eliminado correctamente' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar el usuario' });
+    return respondError(res, error, 'Error al eliminar el usuario');
   }
 };
