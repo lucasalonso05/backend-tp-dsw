@@ -1,74 +1,86 @@
 import { Request, Response } from 'express';
+import logger from '../config/logger';
 import * as digitalticketService from '../services/digitalticket.service';
-import { create_digitalticket_schema } from '../schemas/digitalticket.schema';
-import { canManage } from '../middlewares/auth.middleware';
+import { create_digitalticket_schema, scan_schema } from '../schemas/digitalticket.schema';
 
-// Un admin ve todos los tickets; cualquier otro, solo los suyos.
+// Lee el :id de la URL. Devuelve null si no es un entero positivo.
+const readId = (req: Request) => {
+  const id = Number(req.params.id);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+
+// Traduce los errores del negocio a códigos HTTP.
+// Lo que no es un error conocido va al log y sale como 500, sin detalles internos.
+const respondError = (res: Response, error: unknown, fallback: string) => {
+  if (error instanceof digitalticketService.InvalidTicketError) {
+    return res.status(400).json({ error: error.message });
+  }
+  if (error instanceof digitalticketService.TicketForbiddenError) {
+    return res.status(403).json({ error: error.message });
+  }
+  if (error instanceof digitalticketService.TicketNotFoundError) {
+    return res.status(404).json({ error: error.message });
+  }
+  if (error instanceof digitalticketService.TicketConflictError) {
+    return res.status(409).json({ error: error.message });
+  }
+  logger.error((error as Error).message);
+  return res.status(500).json({ error: fallback });
+};
+
+// Todas las rutas de tickets exigen sesión (requireAuth), así que req.user siempre está.
+
+// 200 · 500
 export const getAll = async (req: Request, res: Response) => {
   try {
-    const user = req.user!;
-    const tickets = await digitalticketService.getAll(user.role === 'ADMIN' ? undefined : user.id);
-    res.status(200).json(tickets);
+    const tickets = await digitalticketService.getAll(req.user!);
+    return res.status(200).json(tickets);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener tickets digitales' });
+    return respondError(res, error, 'Error al obtener tickets digitales');
   }
 };
 
+// 200 · 400 id inválido · 404 no existe o no es tuyo · 500
 export const getById = async (req: Request, res: Response) => {
+  const id = readId(req);
+  if (id === null) {
+    return res.status(400).json({ error: 'El id debe ser un número entero positivo' });
+  }
+
   try {
-    const { id } = req.params;
-    const ticket = await digitalticketService.getById(Number(id));
-    if (!ticket) {
-      return res.status(404).json({ error: 'Ticket no encontrado' });
-    }
-    if (!canManage(req.user!, ticket.id_user)) {
-      return res.status(403).json({ error: 'Solo el titular o un admin pueden ver este ticket' });
-    }
-    res.status(200).json(ticket);
+    const ticket = await digitalticketService.getById(id, req.user!);
+    return res.status(200).json(ticket);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener ticket' });
+    return respondError(res, error, 'Error al obtener el ticket');
   }
 };
 
+// 201 · 400 datos inválidos o item/usuario inexistente · 409 orden sin pagar o tickets ya emitidos · 500
 export const create = async (req: Request, res: Response) => {
-  try {
-    const validation = create_digitalticket_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
+  const validation = create_digitalticket_schema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.issues });
+  }
 
+  try {
     const ticket = await digitalticketService.create(validation.data);
-    res.status(201).json(ticket);
+    return res.status(201).json(ticket);
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    return respondError(res, error, 'Error al emitir el ticket');
   }
 };
 
+// 200 · 400 falta el QR · 403 no es tu evento · 404 · 409 ya escaneado · 500
 export const scan = async (req: Request, res: Response) => {
+  const validation = scan_schema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.issues });
+  }
+
   try {
-    const qr_code = req.body?.qr_code;
-    if (!qr_code || typeof qr_code !== 'string') {
-      return res.status(400).json({ error: 'Debe enviar un código QR válido' });
-    }
-
-    const ticket = await digitalticketService.findForScan(qr_code.trim());
-    if (!ticket) {
-      return res.status(404).json({ error: 'El ticket no existe' });
-    }
-
-    // Solo escanea el organizador del evento del ticket, o un admin.
-    const event = ticket.FK_order_item.FK_entry.FK_event;
-    if (!canManage(req.user!, event.id_user)) {
-      return res.status(403).json({ error: 'Este ticket es de un evento que no organizás' });
-    }
-
-    if (ticket.status === 'SCANNED' || !(await digitalticketService.markScanned(ticket.id))) {
-      return res.status(409).json({ error: 'El ticket ya fue escaneado' });
-    }
-
-    const scanned = await digitalticketService.findForScan(ticket.qr_code);
-    res.status(200).json(scanned);
+    const ticket = await digitalticketService.scan(validation.data.qr_code, req.user!);
+    return res.status(200).json(ticket);
   } catch (error) {
-    res.status(500).json({ error: 'Error al escanear el ticket' });
+    return respondError(res, error, 'Error al escanear el ticket');
   }
 };
