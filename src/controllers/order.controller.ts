@@ -1,73 +1,91 @@
 import { Request, Response } from 'express';
+import logger from '../config/logger';
 import * as orderService from '../services/order.service';
 import { create_order_schema, update_order_schema } from '../schemas/order.schema';
-import { canManage } from '../middlewares/auth.middleware';
 
-// Un admin ve todas las órdenes; cualquier otro, solo las suyas.
+// Lee el :id de la URL. Devuelve null si no es un entero positivo.
+const readId = (req: Request) => {
+  const id = Number(req.params.id);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+
+// Traduce los errores del negocio a códigos HTTP.
+// Lo que no es un error conocido va al log y sale como 500, sin detalles internos.
+const respondError = (res: Response, error: unknown, fallback: string) => {
+  if (error instanceof orderService.InvalidOrderError) {
+    return res.status(400).json({ error: error.message });
+  }
+  if (error instanceof orderService.OrderForbiddenError) {
+    return res.status(403).json({ error: error.message });
+  }
+  if (error instanceof orderService.OrderNotFoundError) {
+    return res.status(404).json({ error: error.message });
+  }
+  if (error instanceof orderService.OrderConflictError) {
+    return res.status(409).json({ error: error.message });
+  }
+  logger.error((error as Error).message);
+  return res.status(500).json({ error: fallback });
+};
+
+// Todas las rutas de órdenes exigen sesión (requireAuth), así que req.user siempre está.
+
+// 200 · 500
 export const getAll = async (req: Request, res: Response) => {
   try {
-    const user = req.user!;
-    const orders = await orderService.getAll(user.role === 'ADMIN' ? undefined : user.id);
-    res.status(200).json(orders);
+    const orders = await orderService.getAll(req.user!);
+    return res.status(200).json(orders);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener ordenes' });
+    return respondError(res, error, 'Error al obtener ordenes');
   }
 };
 
+// 200 · 400 id inválido · 404 no existe o no es tuya · 500
 export const getById = async (req: Request, res: Response) => {
+  const id = readId(req);
+  if (id === null) {
+    return res.status(400).json({ error: 'El id debe ser un número entero positivo' });
+  }
+
   try {
-    const { id } = req.params;
-    const order = await orderService.getById(Number(id));
-    if (!order) {
-      return res.status(404).json({ error: 'Orden no encontrada' });
-    }
-    if (!canManage(req.user!, order.id_user)) {
-      return res.status(403).json({ error: 'Solo el comprador o un admin pueden ver esta orden' });
-    }
-    res.status(200).json(order);
+    const order = await orderService.getById(id, req.user!);
+    return res.status(200).json(order);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener orden' });
+    return respondError(res, error, 'Error al obtener la orden');
   }
 };
 
+// 201 · 400 datos inválidos o entrada inexistente · 409 sin stock o evento no a la venta · 500
 export const create = async (req: Request, res: Response) => {
-  try {
-    const validation = create_order_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
+  const validation = create_order_schema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.issues });
+  }
 
-    // El comprador es quien inició sesión.
-    const order = await orderService.create(req.user!.id, validation.data);
-    res.status(201).json(order);
+  try {
+    const order = await orderService.create(validation.data, req.user!);
+    return res.status(201).json(order);
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    return respondError(res, error, 'Error al crear la orden');
   }
 };
 
+// 200 · 400 id o datos inválidos · 403 vencer sin ser admin · 404 · 409 ya no está pendiente · 500
 export const update = async (req: Request, res: Response) => {
+  const id = readId(req);
+  if (id === null) {
+    return res.status(400).json({ error: 'El id debe ser un número entero positivo' });
+  }
+
+  const validation = update_order_schema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.issues });
+  }
+
   try {
-    const { id } = req.params;
-    const validation = update_order_schema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ error: validation.error.issues });
-    }
-
-    const order = await orderService.getById(Number(id));
-    if (!order) {
-      return res.status(404).json({ error: 'Orden no encontrada' });
-    }
-    if (!canManage(req.user!, order.id_user)) {
-      return res.status(403).json({ error: 'Solo el comprador o un admin pueden modificar esta orden' });
-    }
-    // El comprador puede pagar (pago simulado) o cancelar. Marcarla como vencida es tarea de un admin.
-    if (validation.data.status === 'EXPIRED' && req.user!.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Solo un admin puede marcar una orden como vencida' });
-    }
-
-    const order_updated = await orderService.changeStatus(Number(id), validation.data);
-    res.status(200).json(order_updated);
+    const order = await orderService.changeStatus(id, validation.data, req.user!);
+    return res.status(200).json(order);
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    return respondError(res, error, 'Error al actualizar la orden');
   }
 };
