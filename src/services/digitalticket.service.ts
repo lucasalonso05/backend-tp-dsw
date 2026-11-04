@@ -82,20 +82,12 @@ export const create = async (data: create_digitalticket_DTO) => {
 
 // Canjea el ticket en la puerta. Solo puede el organizador del evento del ticket, o un admin.
 export const scan = async (qr_code: string, actor: PayloadToken) => {
-  const ticket = await prisma.digital_ticket.findUnique({ where: { qr_code }, include: para_escaneo });
+  const ticket = await prisma.digital_ticket.findUnique({ where: { qr_code }, include: for_scan });
   if (!ticket) throw new TicketNotFoundError();
 
   const event = ticket.FK_order_item.FK_entry.FK_event;
   if (!canManage(actor, event.id_user)) {
     throw new TicketForbiddenError('Este ticket es de un evento que no organizás');
-// Busca un ticket por su código QR, con su evento, tipo de entrada y titular.
-export const findForScan = async (qr_code: string) => {
-  try {
-    const ticket = await prisma.digital_ticket.findUnique({ where: { qr_code }, include: for_scan });
-    return ticket;
-  } catch (error) {
-    logger.error((error as Error).message);
-    throw new Error('Error al buscar el ticket');
   }
 
   try {
@@ -104,7 +96,7 @@ export const findForScan = async (qr_code: string) => {
     return await prisma.digital_ticket.update({
       where: { id: ticket.id, status: 'UNSCANNED' },
       data: { status: 'SCANNED', date_time_scan: new Date() },
-      include: para_escaneo,
+      include: for_scan,
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
