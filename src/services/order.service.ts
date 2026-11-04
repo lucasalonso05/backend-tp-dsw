@@ -59,6 +59,8 @@ export const getById = async (id: number, actor: PayloadToken) => {
 
 // Crea la orden PENDING y reserva el stock de cada entrada. El comprador es quien hace el pedido.
 export const create = async (data: create_order_DTO, actor: PayloadToken) => {
+  // Toda la compra se evalúa contra el mismo instante.
+  const now = new Date();
   // Si llega dos veces la misma entrada, se suman las cantidades.
   const quantities = new Map<number, number>();
   for (const item of data.items) {
@@ -80,6 +82,10 @@ export const create = async (data: create_order_DTO, actor: PayloadToken) => {
       if (!entry) throw new InvalidOrderError(`La entrada ${id_entry} no existe`);
       if (entry.FK_event.status !== 'CONFIRMED') {
         throw new OrderConflictError(`El evento de "${entry.entry_name}" no está a la venta`);
+      }
+      // Una entrada vencida no se vende más, aunque le quede stock.
+      if (entry.date_time_end <= now) {
+        throw new OrderConflictError(`La entrada "${entry.entry_name}" ya no está a la venta`);
       }
 
       // Reserva atómica: la condición de stock va dentro del UPDATE. La base la evalúa y escribe
@@ -124,6 +130,11 @@ export const changeStatus = async (id: number, data: update_order_DTO, actor: Pa
       const inactive = order.items.find((item) => item.FK_entry.FK_event.status !== 'CONFIRMED');
       if (inactive) {
         throw new OrderConflictError(`El evento de "${inactive.FK_entry.entry_name}" ya no está a la venta`);
+      }
+      // La orden pudo quedar pendiente un tiempo: al pagar se vuelve a mirar que no haya vencido.
+      const expired = order.items.find((item) => item.FK_entry.date_time_end <= new Date());
+      if (expired) {
+        throw new OrderConflictError(`La entrada "${expired.FK_entry.entry_name}" ya no está a la venta`);
       }
     }
 
