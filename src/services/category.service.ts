@@ -59,13 +59,19 @@ export const create = async (data: create_category_DTO) => {
 export const update = async (id: number, data: update_category_DTO) => {
   await getById(id);
 
-  if (data.name) {
-    const existing = await findByName(data.name);
-    // Corregirle las mayúsculas a la propia categoría sí vale: el choque es con otra.
-    if (existing && existing.id !== id) throw new CategoryAlreadyExistsError(existing.name);
-  }
+  const existing = await findByName(data.name);
+  // Corregirle las mayúsculas a la propia categoría sí vale: el choque es con otra.
+  if (existing && existing.id !== id) throw new CategoryAlreadyExistsError(existing.name);
 
-  return prisma.category.update({ where: { id }, data });
+  try {
+    return await prisma.category.update({ where: { id }, data });
+  } catch (error) {
+    // P2002: otro pedido le puso el mismo nombre a otra categoría al mismo tiempo.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new CategoryAlreadyExistsError(data.name);
+    }
+    throw error;
+  }
 };
 
 export const delete_ = async (id: number) => {
