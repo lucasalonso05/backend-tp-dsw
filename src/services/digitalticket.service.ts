@@ -1,8 +1,9 @@
-import logger from '../config/logger';
-import prisma from '../config/prisma'
-import { Prisma } from '../generated/prisma';
-import { create_digitalticket_DTO } from '../schemas/digitalticket.schema';
 import { v4 as uuidv4 } from 'uuid';
+import prisma from '../config/prisma';
+import { Prisma } from '../generated/prisma';
+import type { PayloadToken } from '../config/jwt';
+import { canManage } from '../middlewares/auth.middleware';
+import { create_digitalticket_DTO } from '../schemas/digitalticket.schema';
 
 // Lo que necesita quien escanea: de qué evento y tipo de entrada es, y de quién.
 const for_scan = {
@@ -10,61 +11,83 @@ const for_scan = {
   FK_order_item: { include: { FK_entry: { include: { FK_event: true } } } },
 } satisfies Prisma.digital_ticketInclude;
 
-// Sin id_user devuelve todos (para un admin); con id_user, solo los de ese titular.
-export const getAll = async (id_user?: number) => {
-  try {
-    const tickets = await prisma.digital_ticket.findMany({ where: { id_user } });
-    return tickets;
-  } catch (error) {
-    logger.error((error as Error).message);
-    throw new Error('Error al obtener tickets digitales');
+// Errores del negocio de tickets. No llevan código HTTP: el controller decide cómo responderlos.
+export class TicketNotFoundError extends Error {
+  constructor() {
+    super('Ticket no encontrado');
+    this.name = 'TicketNotFoundError';
   }
+}
+
+export class TicketForbiddenError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TicketForbiddenError';
+  }
+}
+
+// Lo que se mandó está mal: por ejemplo, un item de orden o un usuario que no existen.
+export class InvalidTicketError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidTicketError';
+  }
+}
+
+// Lo que se pidió choca con el estado actual: ya escaneado, orden sin pagar, tickets ya emitidos.
+export class TicketConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TicketConflictError';
+  }
+}
+
+// Un admin ve todos los tickets; cualquier otro, solo los suyos.
+export const getAll = async (actor: PayloadToken) => {
+  return prisma.digital_ticket.findMany({
+    where: actor.role === 'ADMIN' ? {} : { id_user: actor.id },
+  });
 };
 
-export const getById = async (id: number) => {
-  try {
-    const ticket_found = await prisma.digital_ticket.findUnique({
-      where: { id },
-    });
-    return ticket_found;
-
-  } catch (error) {
-    logger.error((error as Error).message);
-    throw new Error('Error al obtener ticket');
-  }
+// Un ticket lo ve su titular o un admin. Para cualquier otro, no existe:
+// los tickets son privados y sus ids son correlativos, igual que las órdenes.
+export const getById = async (id: number, actor: PayloadToken) => {
+  const ticket = await prisma.digital_ticket.findUnique({ where: { id } });
+  if (!ticket || !canManage(actor, ticket.id_user)) throw new TicketNotFoundError();
+  return ticket;
 };
 
+// Emisión manual: solo un admin (lo exige la ruta). Lo normal es que se emitan al pagar la orden.
 export const create = async (data: create_digitalticket_DTO) => {
-  try {
-    const order_item = await prisma.order_item.findUnique({
-      where: { id: data.id_order_item },
-      include: { FK_order: true },
-    });
-    if (!order_item) throw new Error('El item de la orden no existe');
-    if (order_item.FK_order.status !== 'PAID') throw new Error('La orden no está pagada');
+  const order_item = await prisma.order_item.findUnique({
+    where: { id: data.id_order_item },
+    include: { FK_order: true },
+  });
+  if (!order_item) throw new InvalidTicketError('El item de la orden no existe');
+  if (order_item.FK_order.status !== 'PAID') throw new TicketConflictError('La orden no está pagada');
 
-    const user = await prisma.user.findUnique({
-      where: { id: data.id_user },
-    });
-    if (!user) throw new Error('El usuario no existe');
+  const user = await prisma.user.findUnique({ where: { id: data.id_user } });
+  if (!user) throw new InvalidTicketError('El usuario no existe');
 
-    const issued_tickets = await prisma.digital_ticket.count({
-      where: { id_order_item: data.id_order_item },
-    });
-    if (issued_tickets >= order_item.quantity) {
-      throw new Error('Ya se emitieron todos los tickets de este item');
-    }
-
-    const qr_code = uuidv4();
-
-    const ticket_created = await prisma.digital_ticket.create({ data: { ...data, qr_code } });
-    return ticket_created;
-  } catch (error) {
-    logger.error((error as Error).message);
-    throw error;
+  const issued_tickets = await prisma.digital_ticket.count({
+    where: { id_order_item: data.id_order_item },
+  });
+  if (issued_tickets >= order_item.quantity) {
+    throw new TicketConflictError('Ya se emitieron todos los tickets de este item');
   }
+
+  // UUID y no el id: un código predecible se podría falsificar mirando otro ticket.
+  return prisma.digital_ticket.create({ data: { ...data, qr_code: uuidv4() } });
 };
 
+// Canjea el ticket en la puerta. Solo puede el organizador del evento del ticket, o un admin.
+export const scan = async (qr_code: string, actor: PayloadToken) => {
+  const ticket = await prisma.digital_ticket.findUnique({ where: { qr_code }, include: para_escaneo });
+  if (!ticket) throw new TicketNotFoundError();
+
+  const event = ticket.FK_order_item.FK_entry.FK_event;
+  if (!canManage(actor, event.id_user)) {
+    throw new TicketForbiddenError('Este ticket es de un evento que no organizás');
 // Busca un ticket por su código QR, con su evento, tipo de entrada y titular.
 export const findForScan = async (qr_code: string) => {
   try {
@@ -74,19 +97,19 @@ export const findForScan = async (qr_code: string) => {
     logger.error((error as Error).message);
     throw new Error('Error al buscar el ticket');
   }
-};
 
-// Marca el ticket como escaneado solo si todavía no lo estaba.
-// Devuelve false si otro escaneo se adelantó.
-export const markScanned = async (id: number) => {
   try {
-    const result = await prisma.digital_ticket.updateMany({
-      where: { id, status: 'UNSCANNED' },
+    // Canje atómico: el UPDATE solo encuentra la fila si el ticket sigue sin escanear.
+    // Si dos escaneos llegan a la vez, uno lo canjea y el otro recibe P2025.
+    return await prisma.digital_ticket.update({
+      where: { id: ticket.id, status: 'UNSCANNED' },
       data: { status: 'SCANNED', date_time_scan: new Date() },
+      include: para_escaneo,
     });
-    return result.count === 1;
   } catch (error) {
-    logger.error((error as Error).message);
-    throw new Error('Error al escanear el ticket');
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      throw new TicketConflictError('El ticket ya fue escaneado');
+    }
+    throw error;
   }
 };
