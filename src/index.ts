@@ -11,6 +11,7 @@ import orderRouter from './routes/order.routes'
 import entryRouter from './routes/entry.routes'
 import digitalticketRouter from './routes/digitalticket.routes'
 import authRouter from './routes/auth.routes'
+import categoryRouter from './routes/category.routes'
 
 const app: Application = express();
 
@@ -49,6 +50,8 @@ app.use('/api/places', placeRouter);
 app.use('/api/users', userRouter);
 
 app.use('/api/events', eventRouter);
+
+app.use('/api/categories', categoryRouter);
 
 app.use('/api/orders', orderRouter);
 

@@ -4,9 +4,11 @@ import type { PayloadToken } from '../config/jwt';
 import { canManage } from '../middlewares/auth.middleware';
 import { create_event_DTO, update_event_DTO } from '../schemas/event.schema';
 
-// Cada evento viaja con los datos públicos de su organizador: nunca email, teléfono ni documento.
-const con_organizador = {
+// Cada evento viaja con los datos públicos de su organizador (nunca email, teléfono ni documento)
+// y con su categoría, que el front muestra en la tarjeta y usa en el filtro de la cartelera.
+const con_relaciones = {
   FK_user: { select: { id: true, name: true, surname: true } },
+  FK_category: { select: { id: true, name: true } },
 } satisfies Prisma.eventInclude;
 
 // Errores del negocio de eventos. No llevan código HTTP: el controller decide cómo responderlos.
@@ -33,11 +35,11 @@ export class InvalidEventError extends Error {
 }
 
 export const getAll = async () => {
-  return prisma.event.findMany({ include: con_organizador });
+  return prisma.event.findMany({ include: con_relaciones });
 };
 
 export const getById = async (id: number) => {
-  const event = await prisma.event.findUnique({ where: { id }, include: con_organizador });
+  const event = await prisma.event.findUnique({ where: { id }, include: con_relaciones });
   if (!event) throw new EventNotFoundError();
   return event;
 };
@@ -53,6 +55,12 @@ const findPlace = async (id_place: number) => {
   const place = await prisma.place.findUnique({ where: { id: id_place } });
   if (!place) throw new InvalidEventError('El lugar no existe');
   return place;
+};
+
+// La categoría es de una tabla compartida: tiene que existir antes de usarla.
+const checkCategory = async (id_category: number) => {
+  const category = await prisma.category.findUnique({ where: { id: id_category } });
+  if (!category) throw new InvalidEventError('La categoría no existe');
 };
 
 const checkCapacity = (total_stock: number, capacity: number) => {
@@ -93,6 +101,7 @@ export const create = async (data: create_event_DTO, actor: PayloadToken) => {
   // El dueño es quien crea el evento. Un admin puede crearlo a nombre de un organizador.
   const id_user = actor.role === 'ADMIN' && data.id_user ? data.id_user : actor.id;
   await checkOrganiser(id_user);
+  await checkCategory(data.id_category);
 
   const place = await findPlace(data.id_place);
   checkCapacity(data.total_stock, place.capacity);
@@ -100,7 +109,7 @@ export const create = async (data: create_event_DTO, actor: PayloadToken) => {
 
   return prisma.event.create({
     data: { ...data, id_user, date_time_cancellation: cancellationDate(data.status, null) },
-    include: con_organizador,
+    include: con_relaciones,
   });
 };
 
@@ -112,6 +121,8 @@ export const update = async (id: number, data: update_event_DTO, actor: PayloadT
   const isAdmin = actor.role === 'ADMIN';
   if (isAdmin && id_user) await checkOrganiser(id_user);
   const changes = isAdmin ? data : resto;
+
+  if (changes.id_category) await checkCategory(changes.id_category);
 
   // Las reglas se validan sobre cómo va a quedar el evento: lo que llega o, si no llega, lo guardado.
   const place = await findPlace(changes.id_place ?? event.id_place);
@@ -127,7 +138,7 @@ export const update = async (id: number, data: update_event_DTO, actor: PayloadT
   return prisma.event.update({
     where: { id },
     data: { ...changes, date_time_cancellation: cancellationDate(status, event.date_time_cancellation) },
-    include: con_organizador,
+    include: con_relaciones,
   });
 };
 
@@ -141,6 +152,6 @@ export const delete_ = async (id: number, actor: PayloadToken) => {
       status: 'CANCELLED',
       date_time_cancellation: cancellationDate('CANCELLED', event.date_time_cancellation),
     },
-    include: con_organizador,
+    include: con_relaciones,
   });
 };

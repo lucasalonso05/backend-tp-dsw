@@ -6,7 +6,7 @@ import { canManage } from '../middlewares/auth.middleware';
 import { create_digitalticket_DTO } from '../schemas/digitalticket.schema';
 
 // Lo que necesita quien escanea: de qué evento y tipo de entrada es, y de quién.
-const para_escaneo = {
+const for_scan = {
   FK_user: { select: { id: true, name: true, surname: true } },
   FK_order_item: { include: { FK_entry: { include: { FK_event: true } } } },
 } satisfies Prisma.digital_ticketInclude;
@@ -88,6 +88,14 @@ export const scan = async (qr_code: string, actor: PayloadToken) => {
   const event = ticket.FK_order_item.FK_entry.FK_event;
   if (!canManage(actor, event.id_user)) {
     throw new TicketForbiddenError('Este ticket es de un evento que no organizás');
+// Busca un ticket por su código QR, con su evento, tipo de entrada y titular.
+export const findForScan = async (qr_code: string) => {
+  try {
+    const ticket = await prisma.digital_ticket.findUnique({ where: { qr_code }, include: for_scan });
+    return ticket;
+  } catch (error) {
+    logger.error((error as Error).message);
+    throw new Error('Error al buscar el ticket');
   }
 
   try {

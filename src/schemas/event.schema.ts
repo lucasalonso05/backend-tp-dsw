@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const create_event_schema = z.object({
 
   title: z.string().min(1),
-  category: z.string().min(1),
   total_stock: z.number().int().positive(),
   date_time_start: z.iso.datetime(),
   date_time_end: z.iso.datetime(),
@@ -12,6 +11,8 @@ export const create_event_schema = z.object({
   // Lo usa solo un admin para crear a nombre de un organizador; si no, el dueño sale del token.
   id_user: z.number().int().positive().optional(),
   id_place: z.number().int().positive(),
+  // La categoría sale de la tabla: el formulario la elige de la lista o la crea antes.
+  id_category: z.number().int().positive(),
 
   });
 
