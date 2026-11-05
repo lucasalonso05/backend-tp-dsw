@@ -71,6 +71,8 @@ export const create = async (req: Request, res: Response) => {
 };
 
 // 200 · 400 falta el QR · 403 no es tu evento · 404 · 409 ya escaneado · 500
+// 200 · 400 falta el QR o el evento · 403 no es tu evento · 404
+// · 409 ya escaneado, de otro evento o de un evento cancelado · 500
 export const scan = async (req: Request, res: Response) => {
   const validation = scan_schema.safeParse(req.body);
   if (!validation.success) {
@@ -78,7 +80,8 @@ export const scan = async (req: Request, res: Response) => {
   }
 
   try {
-    const ticket = await digitalticketService.scan(validation.data.qr_code, req.user!);
+    const { qr_code, id_event } = validation.data;
+    const ticket = await digitalticketService.scan(qr_code, id_event, req.user!);
     return res.status(200).json(ticket);
   } catch (error) {
     return respondError(res, error, 'Error al escanear el ticket');
