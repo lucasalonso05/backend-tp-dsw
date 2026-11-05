@@ -5,8 +5,28 @@ import type { PayloadToken } from '../config/jwt';
 import { canManage } from '../middlewares/auth.middleware';
 import { create_order_DTO, update_order_DTO } from '../schemas/order.schema';
 
-// Cada orden viaja con sus líneas, y cada línea con sus tickets.
-const con_tickets = { items: { include: { tickets: true } } } satisfies Prisma.orderInclude;
+// Cada orden viaja con sus líneas, y cada línea con sus tickets, su tipo de entrada y su evento.
+// Es lo que muestra "Mis entradas": así el front no tiene que pedir eventos y entradas aparte.
+const con_detalle = {
+  items: {
+    include: {
+      tickets: true,
+      FK_entry: {
+        select: {
+          entry_name: true,
+          FK_event: {
+            select: {
+              id: true,
+              title: true,
+              date_time_start: true,
+              FK_place: { select: { name: true, city: true } },
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.orderInclude;
 
 // Errores del negocio de órdenes. No llevan código HTTP: el controller decide cómo responderlos.
 export class OrderNotFoundError extends Error {
@@ -44,7 +64,7 @@ export class OrderConflictError extends Error {
 export const getAll = async (actor: PayloadToken) => {
   return prisma.order.findMany({
     where: actor.role === 'ADMIN' ? {} : { id_user: actor.id },
-    include: con_tickets,
+    include: con_detalle,
     orderBy: { createdAt: 'desc' },
   });
 };
@@ -52,13 +72,15 @@ export const getAll = async (actor: PayloadToken) => {
 // Una orden la ve su comprador o un admin. Para cualquier otro, no existe:
 // las órdenes son privadas y sus ids son correlativos, así que un 403 confirmaría que existe.
 export const getById = async (id: number, actor: PayloadToken) => {
-  const order = await prisma.order.findUnique({ where: { id }, include: con_tickets });
+  const order = await prisma.order.findUnique({ where: { id }, include: con_detalle });
   if (!order || !canManage(actor, order.id_user)) throw new OrderNotFoundError();
   return order;
 };
 
 // Crea la orden PENDING y reserva el stock de cada entrada. El comprador es quien hace el pedido.
 export const create = async (data: create_order_DTO, actor: PayloadToken) => {
+  // Toda la compra se evalúa contra el mismo instante.
+  const now = new Date();
   // Si llega dos veces la misma entrada, se suman las cantidades.
   const quantities = new Map<number, number>();
   for (const item of data.items) {
@@ -81,6 +103,10 @@ export const create = async (data: create_order_DTO, actor: PayloadToken) => {
       if (entry.FK_event.status !== 'CONFIRMED') {
         throw new OrderConflictError(`El evento de "${entry.entry_name}" no está a la venta`);
       }
+      // Una entrada vencida no se vende más, aunque le quede stock.
+      if (entry.date_time_end <= now) {
+        throw new OrderConflictError(`La entrada "${entry.entry_name}" ya no está a la venta`);
+      }
 
       // Reserva atómica: la condición de stock va dentro del UPDATE. La base la evalúa y escribe
       // en una sola operación, con la fila bloqueada: dos compras a la vez no pueden pasar las dos.
@@ -100,7 +126,7 @@ export const create = async (data: create_order_DTO, actor: PayloadToken) => {
 
     return tx.order.create({
       data: { id_user: actor.id, total, items: { create: items_data } },
-      include: con_tickets,
+      include: con_detalle,
     });
   });
 };
@@ -124,6 +150,11 @@ export const changeStatus = async (id: number, data: update_order_DTO, actor: Pa
       const inactive = order.items.find((item) => item.FK_entry.FK_event.status !== 'CONFIRMED');
       if (inactive) {
         throw new OrderConflictError(`El evento de "${inactive.FK_entry.entry_name}" ya no está a la venta`);
+      }
+      // La orden pudo quedar pendiente un tiempo: al pagar se vuelve a mirar que no haya vencido.
+      const expired = order.items.find((item) => item.FK_entry.date_time_end <= new Date());
+      if (expired) {
+        throw new OrderConflictError(`La entrada "${expired.FK_entry.entry_name}" ya no está a la venta`);
       }
     }
 
