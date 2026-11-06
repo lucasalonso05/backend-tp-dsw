@@ -21,13 +21,17 @@ app.use(helmet());
 
 // Orígenes que pueden llamar a la API, separados por coma en FRONTEND_URL.
 // Si no está definida, solo el frontend local.
-const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+const allowedOrigins: (string | RegExp)[] = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
   .split(',')
-  .map((origin) => origin.trim());
+  .map((origin) => origin.trim().replace(/\/$/, ''));
+
+// Vercel le da una URL distinta a cada deploy del front (con un hash en el nombre),
+// así que también se aceptan todas las del proyecto eventify-frontend.
+allowedOrigins.push(/^https:\/\/eventify-frontend(-[a-z0-9-]+)?-lucasalonso1232-1972s-projects\.vercel\.app$/);
 
 app.use(cors({
-  origin: ["http://localhost:5173", "https://eventify.vercel.app"],
-  credentials: true, // solo si usás cookies
+  origin: allowedOrigins,
+  credentials: true,
 }));
 
 // Parsea el body de las peticiones como JSON
