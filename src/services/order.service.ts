@@ -1,4 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';
+// randomUUID viene con Node: genera el mismo UUID v4 que la librería uuid, sin instalar nada.
+import { randomUUID } from 'node:crypto';
 import prisma from '../config/prisma';
 import { Prisma } from '../generated/prisma';
 import type { PayloadToken } from '../config/jwt';
@@ -181,7 +182,7 @@ export const changeStatus = async (id: number, data: update_order_DTO, actor: Pa
       await tx.digital_ticket.createMany({
         data: order.items.flatMap((item) =>
           Array.from({ length: item.quantity }, () => ({
-            qr_code: uuidv4(),
+            qr_code: randomUUID(),
             id_order_item: item.id,
             id_user: order.id_user,
           })),

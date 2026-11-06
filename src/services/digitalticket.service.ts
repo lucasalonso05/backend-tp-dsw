@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import prisma from '../config/prisma';
 import { Prisma } from '../generated/prisma';
 import type { PayloadToken } from '../config/jwt';
@@ -76,11 +76,9 @@ export const create = async (data: create_digitalticket_DTO) => {
     throw new TicketConflictError('Ya se emitieron todos los tickets de este item');
   }
 
-  // UUID y no el id: un código predecible se podría falsificar mirando otro ticket.
-  return prisma.digital_ticket.create({ data: { ...data, qr_code: uuidv4() } });
+  return prisma.digital_ticket.create({ data: { ...data, qr_code: randomUUID() } });
 };
 
-// Canjea el ticket en la puerta. Solo puede el organizador del evento del ticket, o un admin.
 // Canjea el ticket en la puerta del evento `id_event`.
 // Solo puede el organizador del evento del ticket, o un admin.
 export const scan = async (qr_code: string, id_event: number, actor: PayloadToken) => {
