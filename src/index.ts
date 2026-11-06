@@ -26,8 +26,8 @@ const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
   .map((origin) => origin.trim());
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
+  origin: ["http://localhost:5173", "https://eventify.vercel.app"],
+  credentials: true, // solo si usás cookies
 }));
 
 // Parsea el body de las peticiones como JSON
