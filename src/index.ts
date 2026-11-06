@@ -64,6 +64,10 @@ app.use('/api/auth', authRouter);
 // ── Middleware de errores globales ──────────────────────
 // Va siempre AL FINAL — captura cualquier error no manejado
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  if ('type' in err && err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'El cuerpo del pedido no es un JSON válido' });
+  }
+
   logger.error(err.message);
   res.status(500).json({ error: 'Error interno del servidor' });
 });

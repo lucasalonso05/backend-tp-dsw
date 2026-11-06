@@ -81,13 +81,26 @@ export const create = async (data: create_digitalticket_DTO) => {
 };
 
 // Canjea el ticket en la puerta. Solo puede el organizador del evento del ticket, o un admin.
-export const scan = async (qr_code: string, actor: PayloadToken) => {
+// Canjea el ticket en la puerta del evento `id_event`.
+// Solo puede el organizador del evento del ticket, o un admin.
+export const scan = async (qr_code: string, id_event: number, actor: PayloadToken) => {
   const ticket = await prisma.digital_ticket.findUnique({ where: { qr_code }, include: for_scan });
   if (!ticket) throw new TicketNotFoundError();
 
   const event = ticket.FK_order_item.FK_entry.FK_event;
   if (!canManage(actor, event.id_user)) {
     throw new TicketForbiddenError('Este ticket es de un evento que no organizás');
+  }
+
+  // El ticket tiene que ser del evento que se está controlando: con dos eventos propios,
+  // en la puerta de uno no puede entrar alguien con la entrada del otro.
+  if (event.id !== id_event) {
+    throw new TicketConflictError(`Este ticket es para otro evento: "${event.title}"`);
+  }
+
+  // Un evento cancelado no habilita ingresos, aunque el ticket esté sin usar.
+  if (event.status === 'CANCELLED') {
+    throw new TicketConflictError('El evento fue cancelado: el ticket no habilita el ingreso');
   }
 
   try {
