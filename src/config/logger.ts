@@ -1,5 +1,10 @@
 import { createLogger, format, transports } from 'winston';
 
+// En Vercel el disco de la función es de solo lectura: no se pueden crear archivos de log.
+// Ahí los logs van solo a la consola, que Vercel guarda en sus Runtime Logs.
+// Vercel define VERCEL=1 en cada deploy; en tu máquina esa variable no existe.
+const onVercel = process.env.VERCEL === '1';
+
 const logger = createLogger({
   level: 'info',
   format: format.combine(
@@ -11,10 +16,13 @@ const logger = createLogger({
   transports: [
     // Muestra los logs en la terminal
     new transports.Console(),
-    // Guarda todos los logs en un archivo
-    new transports.File({ filename: 'logs/app.log' }),
-    // Guarda solo los errores en un archivo separado
-    new transports.File({ filename: 'logs/error.log', level: 'error' }),
+    // En local, además, los guarda en archivos: todos en app.log y solo los errores en error.log
+    ...(onVercel
+      ? []
+      : [
+          new transports.File({ filename: 'logs/app.log' }),
+          new transports.File({ filename: 'logs/error.log', level: 'error' }),
+        ]),
   ],
 });
 
