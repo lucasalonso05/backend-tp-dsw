@@ -1,5 +1,8 @@
 node_modules/
 dist/
+# Los .env de cada ambiente tienen secretos: no se suben. El .env.example sí (sin valores reales).
 .env
+.env.*
+!.env.example
 logs/
 /src/generated/prisma
