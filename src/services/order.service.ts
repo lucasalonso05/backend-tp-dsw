@@ -5,6 +5,7 @@ import { Prisma } from '../generated/prisma';
 import type { PayloadToken } from '../config/jwt';
 import { canManage } from '../middlewares/auth.middleware';
 import { create_order_DTO, update_order_DTO } from '../schemas/order.schema';
+import { sendOrderPaidMail } from './order-mail.service';
 
 // Cada orden viaja con sus líneas, y cada línea con sus tickets, su tipo de entrada y su evento.
 // Es lo que muestra "Mis entradas": así el front no tiene que pedir eventos y entradas aparte.
@@ -197,7 +198,11 @@ export const changeStatus = async (id: number, data: update_order_DTO, actor: Pa
         });
       }
     }
-  });
+    });
+
+  // El pago ya quedó guardado: recién ahora se le avisa al comprador por mail.
+  // Si el mail falla, el pago sigue firme (sendOrderPaidMail nunca tira error).
+  if (data.status === 'PAID') await sendOrderPaidMail(id);
 
   return getById(id, actor);
 };
