@@ -77,6 +77,11 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // ── Iniciar servidor ────────────────────────────────────
-app.listen(config.port, () => {
-  logger.info(`Servidor corriendo en http://localhost:${config.port}`);
-});
+// En los tests no se levanta el servidor: Supertest le manda los pedidos directo a la app.
+if (config.nodeEnv !== 'test') {
+  app.listen(config.port, () => {
+    logger.info(`Servidor corriendo en http://localhost:${config.port}`);
+  });
+}
+
+export default app;
